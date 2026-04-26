@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Mizofy TV",
-    "slug": "mizofy-tv",
+    "name": "Mizofy Admin",
+    "slug": "mizofy-admin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.mizofy.tv",
+      "package": "com.mizofy.admin",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"

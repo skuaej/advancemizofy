@@ -311,10 +311,7 @@ export default function HomeScreen() {
           onPress={() => openSocial(settings.telegramLink)}
           activeOpacity={0.8}
         >
-          <Image 
-            source={require('../../assets/telegram_logo.png')} 
-            style={{ width: 32, height: 32 }} 
-          />
+          <Ionicons name="paper-plane" size={28} color="#fff" />
         </TouchableOpacity>
       ) : null}
     </View>
