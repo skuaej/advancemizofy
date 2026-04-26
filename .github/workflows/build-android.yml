@@ -23,20 +23,22 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
+        working-directory: ./ummo-tv-admin/ummo-tv-app
         run: npm install
 
       - name: Generate Android project
+        working-directory: ./ummo-tv-admin/ummo-tv-app
         run: npx expo prebuild --platform android --no-install
 
       - name: Build APK with Gradle
-        working-directory: ./android
+        working-directory: ./ummo-tv-admin/ummo-tv-app/android
         run: ./gradlew assembleRelease
 
       - name: Upload Admin APK
         uses: actions/upload-artifact@v4
         with:
           name: Mizofy-Admin-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: ummo-tv-admin/ummo-tv-app/android/app/build/outputs/apk/release/app-release.apk
 
   build-user:
     name: Build User App APK
