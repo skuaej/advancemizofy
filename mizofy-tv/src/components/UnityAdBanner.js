@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { BannerView } from 'react-native-unity-ads';
+import { WebView } from 'react-native-webview';
 
 /**
  * Verified Unity Ads Configuration for UmmoTV Project
@@ -26,10 +26,17 @@ export const UNITY_CONFIG = {
 export default function UnityAdBanner() {
   return (
     <View style={styles.adContainer}>
-      <BannerView
-        placementId={UNITY_CONFIG.PLACEMENTS.BANNER}
-        onLoad={() => console.log('Banner loaded')}
-        onError={(err) => console.log('Banner error:', err)}
+      <WebView
+        source={{ html: `
+          <html>
+            <body style="margin:0;padding:0;background:#1a1a1a;display:flex;justify-content:center;align-items:center;">
+              <div style="color:#ff2d2d;font-family:sans-serif;font-weight:bold;font-size:14px;border:1px solid #ff2d2d;padding:10px;border-radius:5px;">
+                UNITY ADS LOADING...
+              </div>
+            </body>
+          </html>
+        `}}
+        style={{ width: '100%', height: 60 }}
       />
     </View>
   );
