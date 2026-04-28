@@ -1,7 +1,7 @@
 {
-  "name": "ummo-tv-app",
+  "name": "mizofy-admin-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "admin-index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

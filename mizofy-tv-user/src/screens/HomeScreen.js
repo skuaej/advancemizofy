@@ -29,98 +29,72 @@ export default function HomeScreen() {
   const carouselRef = useRef(null);
 
   useEffect(() => {
-    // Sync Channels
-    const channelsRef = ref(database, 'channels');
-    const unsubscribeChannels = onValue(channelsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setChannels(Object.keys(data).map(key => ({ id: key, ...data[key] })));
-      else setChannels([]);
-    });
-
-    // Sync Categories
-    const categoriesRef = ref(database, 'categories');
-    const unsubscribeCategories = onValue(categoriesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const catList = Object.keys(data).map(key => data[key].name);
-        setCategories(catList);
-        if (catList.length > 0) setActiveCategory(catList[0]);
-      } else setCategories([]);
-    });
-
-    // Sync Banners
-    const bannersRef = ref(database, 'banners');
-    const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setBanners(Object.keys(data).map(key => data[key]).filter(b => b.imageUrl));
-      else setBanners([]);
+    if (!database) {
       setLoading(false);
-    });
+      return;
+    }
 
-    // Sync Settings & Socials
-    const settingsRef = ref(database, 'settings');
-    const unsubscribeSettings = onValue(settingsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setSettings(data);
-    });
+    try {
+      // Sync Channels
+      const channelsRef = ref(database, 'channels');
+      const unsubscribeChannels = onValue(channelsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) setChannels(Object.keys(data).map(key => ({ id: key, ...data[key] })));
+        else setChannels([]);
+      });
 
-    // Sync Global Config (Force Update & Notifications)
-    const configRef = ref(database, 'globalConfig');
-    const unsubscribeConfig = onValue(configRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setGlobalConfig(data);
-    });
+      // Sync Categories
+      const categoriesRef = ref(database, 'categories');
+      const unsubscribeCategories = onValue(categoriesRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const sortedCats = Object.keys(data)
+            .map(key => ({ id: key, ...data[key] }))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          
+          const catList = sortedCats.map(c => c.name);
+          setCategories(catList);
+          if (catList.length > 0) setActiveCategory(catList[0]);
+        } else setCategories([]);
+      });
 
-    // ANALYTICS: Increment Total Boots
-    import('firebase/database').then((fb) => {
-       const visitRef = fb.ref(database, 'counters/visits');
-       fb.runTransaction(visitRef, (currentVal) => {
-         return (currentVal || 0) + 1;
-       }).catch(err => console.log('Analytics Error:', err));
-    });
+      // Sync Banners
+      const bannersRef = ref(database, 'banners');
+      const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) setBanners(Object.keys(data).map(key => data[key]).filter(b => b.imageUrl));
+        else setBanners([]);
+        setLoading(false);
+      });
 
-    const timeout = setTimeout(() => setLoading(false), 3000);
+      // Sync Settings & Socials
+      const settingsRef = ref(database, 'settings');
+      const unsubscribeSettings = onValue(settingsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) setSettings(data);
+      });
 
-    const securityCheck = async () => {
-      try {
-        // 1. Prevent Screen Capture/Recording
-        await ScreenCapture.preventScreenCaptureAsync();
-        
-        // 2. Detect Root/Jailbreak (High risk for capture tools)
-        const isRooted = await Device.isRootedExperimentalAsync();
-        
-        // 3. Detect Proxy/VPN (HttpCanary, Pocket Capture, Reqable, etc.)
-        const network = await Network.getNetworkStateAsync();
-        const isProxy = await Network.isProxyActiveAsync();
-        
-        if (isProxy || network.type === Network.NetworkStateType.VPN || isRooted) {
-          setSecurityViolation(true);
-          Alert.alert(
-            "Security Violation", 
-            "Mizofy TV has detected a Network Interceptor (HttpCanary, Pocket Capture, etc.) or a Rooted Device. Please disable all capture tools and VPNs to continue.",
-            [{ text: "RE-SCAN", onPress: () => securityCheck() }]
-          );
-        } else {
-          setSecurityViolation(false);
-        }
-      } catch (e) { console.log('Security Check Error:', e); }
-    };
+      // Sync Global Config (Force Update & Notifications)
+      const configRef = ref(database, 'globalConfig');
+      const unsubscribeConfig = onValue(configRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) setGlobalConfig(data);
+      });
 
-    // Run check on focus to prevent turning tools on while app is open
-    useFocusEffect(
-      useCallback(() => {
-        securityCheck();
-      }, [])
-    );
+      const timeout = setTimeout(() => setLoading(false), 3000);
 
-    return () => {
-      clearTimeout(timeout);
-      unsubscribeChannels();
-      unsubscribeCategories();
-      unsubscribeBanners();
-      unsubscribeSettings();
-      unsubscribeConfig();
-    };
+      return () => {
+        clearTimeout(timeout);
+        unsubscribeChannels();
+        unsubscribeCategories();
+        unsubscribeBanners();
+        unsubscribeSettings();
+        unsubscribeConfig();
+      };
+    } catch (e) {
+      console.warn('User Sync Error:', e);
+      setLoading(false);
+    }
   }, []);
 
   // Auto-Scroller for Banner Slider
@@ -235,6 +209,18 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* SEARCH BAR */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={{marginLeft: 15}} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search all channels..."
+            placeholderTextColor="#666"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
         {/* CAROUSEL IMPLEMENTATION */}
         {banners.length > 0 && (
           <View style={styles.bannerContainer}>
@@ -326,6 +312,8 @@ const styles = StyleSheet.create({
   },
   logoText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
   shareButton: { padding: 5 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', margin: 15, borderRadius: 10, borderWidth: 1, borderColor: '#333' },
+  searchInput: { flex: 1, color: '#fff', padding: 12, fontSize: 16 },
   alertBanner: { backgroundColor: '#ff9900', flexDirection: 'row', padding: 12, alignItems: 'center', justifyContent: 'center' },
   alertText: { color: '#fff', fontWeight: 'bold', marginLeft: 10, textAlign: 'center' },
   bannerContainer: { height: 180, marginVertical: 15 },
