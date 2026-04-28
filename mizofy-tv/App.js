@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -58,6 +58,8 @@ export default function App() {
   React.useEffect(() => {
     // Highly aggressive Android Package Sniffer to detect tampering software
     const checkSecurity = async () => {
+      if (Platform.OS === 'web') return; // Bypass security on web
+      
       if (!Device.isDevice) {
         setSecurityBlock(true);
         return;

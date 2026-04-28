@@ -1,0 +1,45 @@
+name: Deploy Website
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (TV)
+        working-directory: ./mizofy-tv
+        run: npm install --legacy-peer-deps
+
+      - name: Build TV Web App
+        working-directory: ./mizofy-tv
+        run: npx expo export --platform web
+
+      - name: Install dependencies (Admin)
+        working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
+        run: npm install --legacy-peer-deps
+
+      - name: Build Admin Web App
+        working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
+        run: npx expo export --platform web
+
+      - name: Combine Builds
+        run: |
+          mkdir -p combined_dist
+          cp -r ./mizofy-tv/dist/* ./combined_dist/
+          mkdir -p ./combined_dist/admin
+          cp -r ./_HIDDEN_ADMIN_/mizofy-admin/dist/* ./combined_dist/admin/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./combined_dist
