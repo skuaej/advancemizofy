@@ -1,5 +1,5 @@
 {
-  "name": "mizofy-admin-app",
+  "name": "mizofy-admin",
   "version": "1.0.0",
   "main": "admin-index.js",
   "scripts": {
