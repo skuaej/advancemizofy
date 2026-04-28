@@ -58,35 +58,9 @@ export default function App() {
   React.useEffect(() => {
     // Highly aggressive Android Package Sniffer to detect tampering software
     const checkSecurity = async () => {
-      // 1. Emulator Block (Many rippers use bluestacks on PC)
       if (!Device.isDevice) {
-        setSecurityBlock(true);
-        return;
-      }
-
-      // 2. Network Sniffer App Detection (Android specific)
-      // We probe the Android Intent Registry for common hack tools
-      const dangerousPackages = [
-        'com.guoshi.httpcanary',
-        'com.guoshi.httpcanary.premium',
-        'com.emanuelef.remote_capture', // PCAPdroid
-        'app.greyshirts.sslcapture',    // Packet Capture
-        'com.minhui.networkcapture'     // Parallel Space rippers
-      ];
-
-      for (let pkg of dangerousPackages) {
-        try {
-          // If the package resolution succeeds, the user has the hacking tool installed on their phone!
-          const result = await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
-            packageName: pkg
-          });
-          if (result) {
-            setSecurityBlock(true);
-            return;
-          }
-        } catch (e) {
-          // Silently fail - Error means the package isn't installed (which means they are safe!)
-        }
+        // Only block on actual emulators if you want, or just skip for now
+        // setSecurityBlock(true); 
       }
     };
     checkSecurity();
