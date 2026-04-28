@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { BannerView } from 'react-native-unity-ads';
 
 /**
  * Verified Unity Ads Configuration for UmmoTV Project
@@ -23,14 +24,13 @@ export const UNITY_CONFIG = {
 };
 
 export default function UnityAdBanner() {
-  // To show real ads, you must install 'react-native-unity-ads'
-  // and use <BannerView /> component here.
-  
   return (
     <View style={styles.adContainer}>
-      <Text style={styles.adText}>[ UNITY ADS ACTIVE ]</Text>
-      <Text style={styles.subText}>Placement: {UNITY_CONFIG.PLACEMENTS.BANNER}</Text>
-      <Text style={styles.subText}>Project: {UNITY_CONFIG.PROJECT_ID.substring(0, 8)}...</Text>
+      <BannerView
+        placementId={UNITY_CONFIG.PLACEMENTS.BANNER}
+        onLoad={() => console.log('Banner loaded')}
+        onError={(err) => console.log('Banner error:', err)}
+      />
     </View>
   );
 }

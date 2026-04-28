@@ -13,6 +13,7 @@ import PlayerScreen from './src/screens/PlayerScreen';
 // Security
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Device from 'expo-device';
+import UnityAds from 'react-native-unity-ads';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -56,6 +57,9 @@ export default function App() {
   const [securityBlock, setSecurityBlock] = React.useState(false);
 
   React.useEffect(() => {
+    // Initialize Unity Ads
+    UnityAds.initialize('6099899', false); // false = not test mode
+
     // Highly aggressive Android Package Sniffer to detect tampering software
     const checkSecurity = async () => {
       if (!Device.isDevice) {

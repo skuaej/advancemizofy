@@ -203,6 +203,15 @@ export default function PlayerScreen() {
                 setStatus(s);
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
               }}
+              onError={(e) => {
+                console.log("Player Error, trying fallback...");
+                if (video.current) {
+                  video.current.loadAsync({ 
+                    uri: channel.url,
+                    overrideFileExtensionAndroid: 'm3u8' 
+                  }, {}, true);
+                }
+              }}
               onFullscreenUpdate={async ({ fullscreenUpdate }) => {
                 if (fullscreenUpdate === 1) {
                   await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
