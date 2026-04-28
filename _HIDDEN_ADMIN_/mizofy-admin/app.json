@@ -27,7 +27,8 @@
       "permissions": ["RECEIVE_BOOT_COMPLETED", "WAKE_LOCK"]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "baseUrl": "/mizofy-tv/"
     }
   }
 }
