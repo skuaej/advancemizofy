@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Generate Android project
         working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
@@ -60,7 +60,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./mizofy-tv
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Generate Android project
         working-directory: ./mizofy-tv
