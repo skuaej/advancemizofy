@@ -59,9 +59,34 @@ export default function App() {
     // Highly aggressive Android Package Sniffer to detect tampering software
     const checkSecurity = async () => {
       if (!Device.isDevice) {
-        // Only block on actual emulators if you want, or just skip for now
-        // setSecurityBlock(true); 
+        setSecurityBlock(true);
+        return;
       }
+
+      // Run background check after app is loaded to prevent hanging
+      setTimeout(async () => {
+        const dangerousPackages = [
+          'com.guoshi.httpcanary',
+          'com.guoshi.httpcanary.premium',
+          'com.emanuelef.remote_capture',
+          'app.greyshirts.sslcapture',
+          'com.minhui.networkcapture'
+        ];
+
+        for (let pkg of dangerousPackages) {
+          try {
+            // Use queryIntentActivities or similar if available, 
+            // otherwise use a very fast check
+            const result = await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MAIN, {
+              packageName: pkg
+            });
+            if (result) {
+              setSecurityBlock(true);
+              return;
+            }
+          } catch (e) {}
+        }
+      }, 5000); // 5 second delay
     };
     checkSecurity();
   }, []);
