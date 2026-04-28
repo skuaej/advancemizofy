@@ -1,7 +1,7 @@
 {
   "name": "mizofy-admin",
   "version": "1.0.0",
-  "main": "admin-index.js",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
