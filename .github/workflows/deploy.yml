@@ -21,7 +21,7 @@ jobs:
 
       - name: Build TV Web App
         working-directory: ./mizofy-tv
-        run: npx expo export --platform web
+        run: EXPO_PUBLIC_BASE_URL=/mizofy-tv npx expo export --platform web
 
       - name: Install dependencies (Admin)
         working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
@@ -29,7 +29,7 @@ jobs:
 
       - name: Build Admin Web App
         working-directory: ./_HIDDEN_ADMIN_/mizofy-admin
-        run: npx expo export --platform web
+        run: EXPO_PUBLIC_BASE_URL=/mizofy-tv/admin npx expo export --platform web
 
       - name: Combine Builds
         run: |
