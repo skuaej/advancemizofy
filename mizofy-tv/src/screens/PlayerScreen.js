@@ -267,17 +267,31 @@ export default function PlayerScreen() {
                   <html>
                   <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-                    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
-                    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js"></script>
                     <style>
-                      body { margin: 0; background: #000; overflow: hidden; }
-                      .video-js { width: 100vw !important; height: 100vh !important; }
+                      body { margin: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+                      video { width: 100%; height: auto; max-height: 100vh; }
                     </style>
                   </head>
                   <body>
-                    <video id="video" class="video-js vjs-default-skin" controls autoplay playsinline data-setup='{}'>
-                      <source src="${channel.url}" type="${channel.url.includes('.mpd') ? 'application/dash+xml' : 'application/x-mpegURL'}">
-                    </video>
+                    <video id="videoElement" controls autoplay playsinline></video>
+                    <script>
+                      if (mpegts.getFeatureList().mseLivePlayback) {
+                        var videoElement = document.getElementById('videoElement');
+                        var player = mpegts.createPlayer({
+                          type: 'mse', // Use MSE for best compatibility
+                          isLive: true,
+                          url: '${channel.url}'
+                        });
+                        player.attachMediaElement(videoElement);
+                        player.load();
+                        player.play().catch(function(e) {
+                          console.log("Auto-play blocked or failed", e);
+                        });
+                      } else {
+                        document.body.innerHTML = '<h2 style="color:white; text-align:center;">MSE not supported on this device</h2>';
+                      }
+                    </script>
                   </body>
                   </html>
                 `
