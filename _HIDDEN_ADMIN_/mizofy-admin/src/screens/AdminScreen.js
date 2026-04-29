@@ -96,6 +96,17 @@ export default function AdminScreen() {
     await update(ref(database, `categories/${target.id}`), { order: currentOrder });
   };
 
+  const deleteCategory = (id) => {
+    Alert.alert(
+      "Delete Category",
+      "Are you sure? This will not delete channels, but they will become uncategorized.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => remove(ref(database, `categories/${id}`)) }
+      ]
+    );
+  };
+
   const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#ff2d2d" /></View>;
@@ -103,7 +114,7 @@ export default function AdminScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.header}>HaMizMizofy Admin
+        <Text style={styles.header}>Hacu Admin</Text>
         <TouchableOpacity onPress={() => navigation.replace('Login')}>
            <Ionicons name="log-out-outline" size={26} color="#666" />
         </TouchableOpacity>
