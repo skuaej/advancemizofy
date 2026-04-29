@@ -57,6 +57,18 @@ export default function PlayerScreen() {
       Audio.setIsEnabledAsync(true);
       Brightness.getBrightnessAsync().then(b => setBrightnessVal(b)).catch(() => {});
       
+      // Volume Hammer: Forcibly ensure volume is 100% multiple times
+      let hammerCount = 0;
+      const hammerInterval = setInterval(() => {
+        if (video.current && hammerCount < 10) {
+          video.current.setVolumeAsync(1.0).catch(() => {});
+          video.current.setIsMutedAsync(false).catch(() => {});
+          hammerCount++;
+        } else {
+          clearInterval(hammerInterval);
+        }
+      }, 1000);
+      
       const subscription = AppState.addEventListener('change', nextAppState => {
         if (nextAppState === 'background' || nextAppState === 'inactive') {
           if (video.current && isPlayingRef.current) {
@@ -179,10 +191,7 @@ export default function PlayerScreen() {
               key={channel.url}
               ref={video}
               style={styles.video}
-              source={{ 
-                uri: channel.url,
-                overrideFileExtensionAndroid: getExtension(),
-              }}
+              source={{ uri: channel.url }}
               useNativeControls={false}
               resizeMode={resizeMode}
               isLooping={false}
@@ -320,7 +329,8 @@ export default function PlayerScreen() {
       <View style={styles.infoContainer}>
         <Text style={styles.title}>{channel.title}</Text>
         <Text style={styles.category}>{channel.category} • {channel.type === 'stream' ? 'Live Stream' : 'Video'}</Text>
-        <View style={styles.adSection}><UnityAdBanner /></View>
+        {/* Temporarily disabled Ad Banner to prevent audio focus theft */}
+        {/* <View style={styles.adSection}><UnityAdBanner /></View> */}
         
         <TouchableOpacity style={styles.vlcActionBtn} onPress={openExternalPlayer}>
           <Ionicons name="flash" size={20} color="#fff" />
