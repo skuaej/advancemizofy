@@ -103,7 +103,7 @@ export default function AdminScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.header}>Hacu Admin</Text>
+        <Text style={styles.header}>HaMizMizofy Admin
         <TouchableOpacity onPress={() => navigation.replace('Login')}>
            <Ionicons name="log-out-outline" size={26} color="#666" />
         </TouchableOpacity>
