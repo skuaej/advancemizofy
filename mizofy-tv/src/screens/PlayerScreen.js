@@ -407,7 +407,7 @@ export default function PlayerScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Ionicons name="eye" size={20} color="#ff2d2d" />
-            <Text style={statText}>  Live</Text>
+            <Text style={styles.statText}>  Live</Text>
           </View>
           {isNativeVideo && (
             <TouchableOpacity style={styles.statBox} onPress={() => adjustVolume(volume > 0 ? -volume : 1)}>
