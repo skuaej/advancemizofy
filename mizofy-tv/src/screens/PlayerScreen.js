@@ -217,7 +217,10 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: getExtension()
+                overrideFileExtensionAndroid: getExtension(),
+                headers: {
+                  'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
+                }
               }}
               progressUpdateIntervalMillis={500}
               useNativeControls={useNative}
