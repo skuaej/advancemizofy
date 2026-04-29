@@ -41,8 +41,6 @@ void main() async {
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    
-    // Subscribe to broadcast topic
     await FirebaseMessaging.instance.subscribeToTopic('all_users');
     
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -161,8 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
     UnityAds.init(
       gameId: Platform.isAndroid ? '5611533' : '5611532',
       testMode: false,
-      onComplete: () => debugPrint('Unity Ads Success'),
-      onFailed: (e, m) => debugPrint('Unity Ads Error: $m'),
     );
   }
 
@@ -228,35 +224,36 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ),
             
+            // Fixed Marquee: Remove "Hi"
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
-              Container(height: 25, child: Marquee(text: "${_globalConfig['alertMsg']}  •  ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11), velocity: 35.0)),
+              Container(height: 20, child: Marquee(text: "${_globalConfig['alertMsg']}   •   ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10), velocity: 30.0)),
 
             Expanded(child: ListView(
               children: [
                 if (_banners.isNotEmpty)
-                  SizedBox(height: 220, child: PageView.builder(
+                  SizedBox(height: 240, child: PageView.builder(
                     controller: _bannerCtrl,
                     itemCount: _banners.length,
                     itemBuilder: (c, i) => GestureDetector(
                       onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(_banners[i]))))),
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10), 
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover)),
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover)),
                         child: Container(
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Colors.black87, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.center)),
-                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Colors.black, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.center)),
+                          padding: const EdgeInsets.all(24),
                           alignment: Alignment.bottomLeft,
-                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
+                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
                         ),
                       ),
                     ),
                   )),
                 
-                // Banner Ad
                 if (_settings['showAds'] != false)
-                  Padding(padding: const EdgeInsets.all(8.0), child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS')),
+                  Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
 
-                SizedBox(height: 45, child: ListView.builder(
+                // Lower Height Categories
+                SizedBox(height: 40, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -266,27 +263,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _activeCategoryId = cat['id']),
                       child: Container(
-                        margin: const EdgeInsets.only(right: 8, top: 4, bottom: 4), 
-                        padding: const EdgeInsets.symmetric(horizontal: 16), 
-                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)), 
-                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: active ? Colors.white : Colors.white60))),
+                        margin: const EdgeInsets.only(right: 8, top: 2, bottom: 2), 
+                        padding: const EdgeInsets.symmetric(horizontal: 14), 
+                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)), 
+                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: active ? Colors.white : Colors.white60))),
                       ),
                     );
                   },
                 )),
 
+                // Lower Height Channel Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.85),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.0),
                   itemCount: filtered.length,
                   itemBuilder: (c, i) => GestureDetector(
                     onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i])))),
                     child: Container(
                       decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 40, color: Colors.white10)))),
-                        Padding(padding: const EdgeInsets.all(12), child: Text(filtered[i]['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 30, color: Colors.white10)))),
+                        Padding(padding: const EdgeInsets.all(10), child: Text(filtered[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
                       ]),
                     ),
                   ),
@@ -299,9 +297,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: const Color(0xFF25D366), child: const Icon(Icons.chat, color: Colors.white, size: 18)),
+          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: const Color(0xFF25D366), child: const Icon(Icons.chat, color: Colors.white, size: 16)),
           const SizedBox(height: 8),
-          if (_settings['telegramLink'] != null) FloatingActionButton.small(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: const Color(0xFF0088CC), child: const Icon(Icons.send, color: Colors.white, size: 18)),
+          if (_settings['telegramLink'] != null) FloatingActionButton.small(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: const Color(0xFF0088CC), child: const Icon(Icons.send, color: Colors.white, size: 16)),
         ],
       ),
     );
