@@ -196,7 +196,7 @@ export default function HomeScreen() {
 
       <ScrollView>
         <View style={styles.header}>
-          <Text style={styles.logoText}>Mizofy <Text style={{color: '#ff2d2d'}}>TV</Text></Text>
+          <Text style={styles.logoText}>Hacu <Text style={{color: '#ff2d2d'}}>TV</Text></Text>
           
           <View style={{flexDirection: 'row', gap: 15}}>
             {settings.whatsappLink ? (
