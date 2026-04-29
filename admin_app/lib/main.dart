@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:reorderables/reorderables.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,76 +30,11 @@ class MizofyAdminApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        primaryColor: Colors.orangeAccent,
-        colorSchemeSeed: Colors.orangeAccent,
+        primaryColor: const Color(0xFFFF2D2D),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       ),
-      home: const AdminLogin(),
-    );
-  }
-}
-
-class AdminLogin extends StatefulWidget {
-  const AdminLogin({super.key});
-
-  @override
-  State<AdminLogin> createState() => _AdminLoginState();
-}
-
-class _AdminLoginState extends State<AdminLogin> {
-  final TextEditingController _passController = TextEditingController();
-
-  void _login() {
-    if (_passController.text == "mizofy123") { // Default password from original repo logic often
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Admin Password')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Container(
-          width: 300,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.admin_panel_settings_rounded, size: 64, color: Colors.orangeAccent),
-              const SizedBox(height: 24),
-              Text('Admin Access', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _passController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  hintText: 'Enter Admin Password',
-                  filled: true,
-                  fillColor: Colors.black,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _login,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orangeAccent, foregroundColor: Colors.black),
-                  child: const Text('UNLOCK PANEL', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      home: const AdminDashboard(),
     );
   }
 }
@@ -116,23 +51,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<Widget> _screens = [
     const ChannelManager(),
     const BannerManager(),
+    const PushNotificationManager(),
     const SettingsManager(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
-        selectedItemColor: Colors.orangeAccent,
-        unselectedItemColor: Colors.white54,
+        selectedItemColor: const Color(0xFFFF2D2D),
+        unselectedItemColor: Colors.white24,
+        type: BottomNavigationBarType.fixed,
         backgroundColor: const Color(0xFF1A1A1A),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.tv_rounded), label: 'Channels'),
           BottomNavigationBarItem(icon: Icon(Icons.view_carousel_rounded), label: 'Banners'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications_active_rounded), label: 'Push'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: 'Settings'),
         ],
       ),
@@ -149,7 +86,7 @@ class ChannelManager extends StatefulWidget {
 
 class _ChannelManagerState extends State<ChannelManager> {
   final DatabaseReference _db = FirebaseDatabase.instance.ref();
-  List<dynamic> _channels = [];
+  List<Map<String, dynamic>> _channels = [];
 
   @override
   void initState() {
@@ -164,97 +101,186 @@ class _ChannelManagerState extends State<ChannelManager> {
     });
   }
 
-  void _addChannel() {
-    showDialog(context: context, builder: (context) => const ChannelDialog());
+  void _importM3U() async {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Fetch from M3U URL'),
+        content: TextField(controller: urlController, decoration: const InputDecoration(hintText: 'https://.../playlist.m3u')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () async {
+              final response = await http.get(Uri.parse(urlController.text));
+              if (response.statusCode == 200) {
+                final lines = response.body.split('\n');
+                for (int i = 0; i < lines.length; i++) {
+                  if (lines[i].startsWith('#EXTINF:')) {
+                    final title = lines[i].split(',').last.trim();
+                    final url = lines[i + 1].trim();
+                    _db.child('channels').push().set({
+                      'title': title,
+                      'url': url,
+                      'category': 'Imported',
+                      'thumbnail': 'https://via.placeholder.com/150',
+                    });
+                  }
+                }
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('FETCH'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Channel Management'), backgroundColor: Colors.transparent),
-      body: ListView.builder(
-        itemCount: _channels.length,
-        padding: const EdgeInsets.all(16),
-        itemBuilder: (context, index) {
-          final ch = _channels[index];
-          return Card(
-            color: Colors.white.withOpacity(0.05),
-            child: ListTile(
-              leading: Image.network(ch['thumbnail'] ?? '', width: 50, height: 50, errorBuilder: (_, __, ___) => const Icon(Icons.tv)),
-              title: Text(ch['title'] ?? ''),
-              subtitle: Text(ch['category'] ?? ''),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () {}),
-                  IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
-                ],
-              ),
-            ),
-          );
-        },
+      appBar: AppBar(
+        title: const Text('Manage Channels'),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(icon: const Icon(Icons.cloud_download_rounded), onPressed: _importM3U),
+          IconButton(icon: const Icon(Icons.add_circle_outline_rounded), onPressed: () {}),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addChannel,
-        backgroundColor: Colors.orangeAccent,
-        child: const Icon(Icons.add, color: Colors.black),
+      body: ReorderableListView(
+        onReorder: (oldIndex, newIndex) {
+          // Implement reorder logic in Firebase
+        },
+        children: _channels.map((ch) => Card(
+          key: ValueKey(ch['id']),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFF1A1A1A),
+          child: ListTile(
+            leading: const Icon(Icons.drag_indicator_rounded, color: Colors.white10),
+            title: Text(ch['title'] ?? ''),
+            subtitle: Text(ch['category'] ?? '', style: const TextStyle(color: Colors.redAccent, fontSize: 10)),
+            trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
+          ),
+        )).toList(),
       ),
     );
   }
 }
 
-class ChannelDialog extends StatefulWidget {
-  const ChannelDialog({super.key});
-
-  @override
-  State<ChannelDialog> createState() => _ChannelDialogState();
-}
-
-class _ChannelDialogState extends State<ChannelDialog> {
-  final _titleController = TextEditingController();
-  final _urlController = TextEditingController();
-  final _thumbController = TextEditingController();
-  final _catController = TextEditingController();
-
-  void _save() {
-    FirebaseDatabase.instance.ref().child('channels').push().set({
-      'title': _titleController.text,
-      'url': _urlController.text,
-      'thumbnail': _thumbController.text,
-      'category': _catController.text,
-    });
-    Navigator.pop(context);
-  }
+class PushNotificationManager extends StatelessWidget {
+  const PushNotificationManager({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('New Channel'),
-      content: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(title: const Text('Push Notifications'), backgroundColor: Colors.transparent),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Title')),
-            TextField(controller: _urlController, decoration: const InputDecoration(labelText: 'Stream URL')),
-            TextField(controller: _thumbController, decoration: const InputDecoration(labelText: 'Thumbnail URL')),
-            TextField(controller: _catController, decoration: const InputDecoration(labelText: 'Category')),
+            const Text('Send alerts to all Mizofy TV users', style: TextStyle(color: Colors.white54)),
+            const SizedBox(height: 32),
+            _buildField('Notification Title', 'e.g. New Movie Added!'),
+            const SizedBox(height: 24),
+            _buildField('Message Content', 'Enter the alert message...', maxLines: 4),
+            const SizedBox(height: 24),
+            _buildField('Image URL (Optional)', 'https://image-link.com/img.jpg'),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('SEND NOTIFICATION', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2D2D), foregroundColor: Colors.white, borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(onPressed: _save, child: const Text('Save')),
+    );
+  }
+
+  Widget _buildField(String label, String hint, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFFFF2D2D), fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        TextField(
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white10),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
       ],
     );
   }
 }
 
-class BannerManager extends StatelessWidget {
+class BannerManager extends StatefulWidget {
   const BannerManager({super.key});
 
   @override
+  State<BannerManager> createState() => _BannerManagerState();
+}
+
+class _BannerManagerState extends State<BannerManager> {
+  final DatabaseReference _db = FirebaseDatabase.instance.ref();
+  List<dynamic> _banners = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _db.child('banners').onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data is Map) {
+        setState(() {
+          _banners = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)}).toList();
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Banner Management Coming Soon'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Manage Banners'), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: () {})]),
+      body: ListView.builder(
+        itemCount: _banners.length,
+        padding: const EdgeInsets.all(16),
+        itemBuilder: (context, i) {
+          final b = _banners[i];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(b['title'] ?? 'Untitled', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(b['url'] ?? 'No Link', style: const TextStyle(color: Colors.white24, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _db.child('banners/${b['id']}').remove()),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -263,6 +289,6 @@ class SettingsManager extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Global Settings Coming Soon'));
+    return const Scaffold(body: Center(child: Text('Settings Management')));
   }
 }
