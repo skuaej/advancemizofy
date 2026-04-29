@@ -207,26 +207,40 @@ export default function PlayerScreen() {
                   <html>
                   <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-                    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/shaka-player.ui.js"></script>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/controls.css">
                     <style>
                       body { margin: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
-                      video { width: 100%; height: auto; max-height: 100vh; }
+                      #video { width: 100%; height: 100vh; }
                     </style>
                   </head>
                   <body>
-                    <video id="videoElement" controls autoplay playsinline></video>
+                    <div data-shaka-player-container style="width:100%; height:100vh;">
+                      <video id="video" data-shaka-player autoplay playsinline style="width:100%; height:100%;"></video>
+                    </div>
                     <script>
-                      if (mpegts.getFeatureList().mseLivePlayback) {
-                        var videoElement = document.getElementById('videoElement');
-                        var player = mpegts.createPlayer({ type: 'mse', isLive: true, url: '${channel.url}' });
-                        player.attachMediaElement(videoElement);
-                        player.load();
-                        player.play();
-                      } else {
-                        var v = document.getElementById('videoElement');
-                        v.src = '${channel.url}';
-                        v.play();
+                      async function initApp() {
+                        const video = document.getElementById('video');
+                        const ui = video['ui'];
+                        const controls = ui.getControls();
+                        const player = controls.getPlayer();
+
+                        try {
+                          await player.load('${channel.url}');
+                          console.log('The video has now been loaded!');
+                        } catch (e) {
+                          console.error('Error code', e.code, 'object', e);
+                          // Fallback to native video tag if Shaka fails
+                          video.src = '${channel.url}';
+                        }
                       }
+
+                      document.addEventListener('shaka-ui-loaded', initApp);
+                      document.addEventListener('shaka-ui-load-failed', () => {
+                         const video = document.getElementById('video');
+                         video.src = '${channel.url}';
+                         video.play();
+                      });
                     </script>
                   </body>
                   </html>
