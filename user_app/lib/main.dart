@@ -259,7 +259,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     // Optimized for HLS / m3u8
-    player.open(Media(widget.channel['url'] ?? '', http_headers: {'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16'}));
+    player.open(Media(widget.channel['url'] ?? '', httpHeaders: {'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16'}));
   }
 
   @override
