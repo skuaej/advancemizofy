@@ -73,7 +73,7 @@ class _AdminLoginState extends State<AdminLogin> {
             children: [
               Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 20)]), child: const Icon(Icons.admin_panel_settings_rounded, size: 48, color: Colors.white)),
               const SizedBox(height: 24),
-              Text('MIZOFY ADMIN', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.black, letterSpacing: 1)),
+              Text('MIZOFY ADMIN', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 32),
               TextField(controller: _passController, obscureText: true, decoration: InputDecoration(hintText: 'Admin PIN', filled: true, fillColor: Colors.black, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
               const SizedBox(height: 24),
@@ -188,7 +188,7 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('MIZOFY CONTENT', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: _addCategory)]),
+      appBar: AppBar(title: Text('MIZOFY CONTENT', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: _addCategory)]),
       body: Column(
         children: [
           SizedBox(
@@ -384,7 +384,7 @@ class _BannerManagerState extends State<BannerManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('MIZOFY BANNERS', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.red), onPressed: () {
+      appBar: AppBar(title: Text('MIZOFY BANNERS', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.red), onPressed: () {
         if (_banners.length >= 5) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('MAX 5 BANNERS ALLOWED'))); return; }
         final t = TextEditingController(); final u = TextEditingController(); final i = TextEditingController();
         showDialog(context: context, builder: (context) => AlertDialog(
@@ -438,7 +438,7 @@ class _PushNotificationManagerState extends State<PushNotificationManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('MIZOFY BROADCAST', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent),
+      appBar: AppBar(title: Text('MIZOFY BROADCAST', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20)), backgroundColor: Colors.transparent),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(children: [
@@ -494,7 +494,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('MIZOFY GLOBAL SETTINGS', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 18)), backgroundColor: Colors.transparent),
+      appBar: AppBar(title: Text('MIZOFY GLOBAL SETTINGS', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18)), backgroundColor: Colors.transparent),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(children: [
@@ -503,13 +503,13 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
             decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.red.withOpacity(0.2))),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ACTIVE INSTALLS', style: TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold)), Text('Real-time Metrics', style: TextStyle(fontSize: 10, color: Colors.white38))]),
-              Text('$_userCount', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.black, color: Colors.red)),
+              Text('$_userCount', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.red)),
             ]),
           ),
           const SizedBox(height: 32),
           TextField(controller: _mq, decoration: const InputDecoration(labelText: 'Home Marquee Alert')),
           const SizedBox(height: 24),
-          const Align(alignment: Alignment.centerLeft, child: Text('FORCE UPDATE SYSTEM', style: TextStyle(fontWeight: FontWeight.black, fontSize: 12, color: Colors.blueAccent))),
+          const Align(alignment: Alignment.centerLeft, child: Text('FORCE UPDATE SYSTEM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.blueAccent))),
           const SizedBox(height: 12),
           TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest App Version')),
           TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Direct APK Download Link')),

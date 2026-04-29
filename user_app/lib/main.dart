@@ -248,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('MIZOFY', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.black, letterSpacing: 1.5)),
+                        Text('MIZOFY', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                         Container(height: 2, width: 40, color: Colors.red),
                       ],
                     ),
