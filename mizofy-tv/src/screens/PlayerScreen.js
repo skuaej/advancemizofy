@@ -169,10 +169,6 @@ export default function PlayerScreen() {
   const isYouTube = channel.type === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
   const isWebEmbed = channel.type === 'embed';
   const getExtension = () => {
-    if (url.includes('.mpd')) return 'mpd';
-    if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return undefined; // Let the system probe for scraped segments
-    if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
     return undefined;
   };
 
@@ -191,17 +187,8 @@ export default function PlayerScreen() {
               key={channel.url}
               ref={video}
               style={styles.video}
-              source={{ 
-                uri: channel.url,
-                overrideFileExtensionAndroid: getExtension(),
-                headers: {
-                  'User-Agent': 'ummo.tv2/9.8 (Linux;Android 16) AndroidXMedia3/1.1.1',
-                  'Icy-MetaData': '1',
-                  'Accept-Encoding': 'identity',
-                  'Connection': 'Keep-Alive'
-                }
-              }}
-              useNativeControls={false}
+              source={{ uri: channel.url }}
+              useNativeControls={true}
               resizeMode={resizeMode}
               isLooping={false}
               volume={1.0}
