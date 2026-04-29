@@ -95,6 +95,11 @@ jobs:
           name: Hacu-User-APK
           path: ./artifacts/user
 
+      - name: Prepare APKs for Release
+        run: |
+          cp ./artifacts/admin/app-release.apk ./HacuAdmin.apk
+          cp ./artifacts/user/app-release.apk ./HacuTV.apk
+
       - name: Create Release and Upload APKs
         uses: softprops/action-gh-release@v1
         with:
@@ -103,7 +108,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./artifacts/admin/app-release.apk
-            ./artifacts/user/app-release.apk
+            ./HacuAdmin.apk
+            ./HacuTV.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
