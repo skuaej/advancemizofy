@@ -186,13 +186,22 @@ export default function PlayerScreen() {
   const url = (channel.url || '').toLowerCase();
   const isYouTube = channel.type === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
   const isWebEmbed = channel.type === 'embed';
-  const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (url.includes('.m3u8') || url.includes('.mpd') || url.includes('.ts') || !url.includes('.html') || url.includes(':8000') || url.includes('/play/')));
+  const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (
+    url.includes('.m3u8') || 
+    url.includes('.mpd') || 
+    url.includes('.ts') || 
+    url.includes(':8000') || 
+    url.includes(':8080') ||
+    url.includes('/play/') ||
+    url.includes('/live/') ||
+    !url.includes('.html')
+  ));
 
   const getExtension = () => {
     if (url.includes('.mpd')) return 'mpd';
     if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return 'm3u8'; // Use m3u8 for TS streams as they are often HLS segments or play better with HLS decoder
-    if (url.includes(':8000') || url.includes('/play/')) return 'm3u8';
+    if (url.includes('.ts')) return 'ts'; // Correct extension for MPEG-TS files
+    if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
     return undefined;
   };
 
@@ -200,8 +209,9 @@ export default function PlayerScreen() {
     <View style={styles.container}>
       <View style={styles.videoContainer}>
         <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
-          {isNativeVideo && playerType === 'native' ? (
+          {isNativeVideo && playerType === 'native' && channel.url ? (
             <Video
+              key={channel.url}
               ref={video}
               style={styles.video}
               source={{ 
@@ -238,28 +248,17 @@ export default function PlayerScreen() {
                   <html>
                   <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-                    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-                    <style>body { margin: 0; background: #000; overflow: hidden; } video { width: 100vw; height: 100vh; }</style>
+                    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+                    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+                    <style>
+                      body { margin: 0; background: #000; overflow: hidden; }
+                      .video-js { width: 100vw !important; height: 100vh !important; }
+                    </style>
                   </head>
                   <body>
-                    <video id="video" controls autoplay playsinline></video>
-                    <script>
-                      var video = document.getElementById('video');
-                      var videoSrc = '${channel.url}';
-                      if (Hls.isSupported()) {
-                        var hls = new Hls();
-                        hls.loadSource(videoSrc);
-                        hls.attachMedia(video);
-                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                          video.play();
-                        });
-                      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                        video.src = videoSrc;
-                        video.addEventListener('loadedmetadata', function() {
-                          video.play();
-                        });
-                      }
-                    </script>
+                    <video id="video" class="video-js vjs-default-skin" controls autoplay playsinline data-setup='{}'>
+                      <source src="${channel.url}" type="${channel.url.includes('.mpd') ? 'application/dash+xml' : 'application/x-mpegURL'}">
+                    </video>
                   </body>
                   </html>
                 `
