@@ -159,7 +159,7 @@ export default function PlayerScreen() {
   const getExtension = () => {
     if (url.includes('.mpd')) return 'mpd';
     if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return 'm3u8'; // This was the original working fix
+    if (url.includes('.ts')) return 'ts'; 
     if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
     return undefined;
   };
