@@ -7,15 +7,19 @@ import 'package:reorderables/reorderables.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "AIzaSyDummyKey_ReplaceWithActual",
-      appId: "1:dummy:android:dummy",
-      messagingSenderId: "dummy",
-      projectId: "ummo-tv-be82a",
-      databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
-    ),
-  );
+  try {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyDummyKey_ReplaceWithActual",
+        appId: "1:dummy:android:dummy",
+        messagingSenderId: "dummy",
+        projectId: "ummo-tv-be82a",
+        databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
+      ),
+    ).timeout(const Duration(seconds: 5));
+  } catch (e) {
+    debugPrint("Firebase Admin Init Error: $e");
+  }
   runApp(const MizofyAdminApp());
 }
 
@@ -34,7 +38,72 @@ class MizofyAdminApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0A0A0A),
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       ),
-      home: const AdminDashboard(),
+      home: const AdminLogin(),
+    );
+  }
+}
+
+class AdminLogin extends StatefulWidget {
+  const AdminLogin({super.key});
+
+  @override
+  State<AdminLogin> createState() => _AdminLoginState();
+}
+
+class _AdminLoginState extends State<AdminLogin> {
+  final TextEditingController _passController = TextEditingController();
+
+  void _login() {
+    if (_passController.text == "mizofy123") {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Admin Password')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.red.withOpacity(0.3)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.admin_panel_settings_rounded, size: 64, color: Colors.red),
+              const SizedBox(height: 24),
+              Text('Admin Access', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _passController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Enter Admin Password',
+                  filled: true,
+                  fillColor: Colors.black,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _login,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                  child: const Text('UNLOCK PANEL', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -91,14 +160,18 @@ class _ChannelManagerState extends State<ChannelManager> {
   @override
   void initState() {
     super.initState();
-    _db.child('channels').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) {
-        setState(() {
-          _channels = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)}).toList();
-        });
-      }
-    });
+    try {
+      _db.child('channels').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) {
+          setState(() {
+            _channels = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)}).toList();
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("DB Admin Error: $e");
+    }
   }
 
   void _importM3U() async {
@@ -112,22 +185,26 @@ class _ChannelManagerState extends State<ChannelManager> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
           ElevatedButton(
             onPressed: () async {
-              final response = await http.get(Uri.parse(urlController.text));
-              if (response.statusCode == 200) {
-                final lines = response.body.split('\n');
-                for (int i = 0; i < lines.length; i++) {
-                  if (lines[i].startsWith('#EXTINF:')) {
-                    final title = lines[i].split(',').last.trim();
-                    final url = lines[i + 1].trim();
-                    _db.child('channels').push().set({
-                      'title': title,
-                      'url': url,
-                      'category': 'Imported',
-                      'thumbnail': 'https://via.placeholder.com/150',
-                    });
+              try {
+                final response = await http.get(Uri.parse(urlController.text)).timeout(const Duration(seconds: 10));
+                if (response.statusCode == 200) {
+                  final lines = response.body.split('\n');
+                  for (int i = 0; i < lines.length; i++) {
+                    if (lines[i].startsWith('#EXTINF:')) {
+                      final title = lines[i].split(',').last.trim();
+                      final url = lines[i + 1].trim();
+                      _db.child('channels').push().set({
+                        'title': title,
+                        'url': url,
+                        'category': 'Imported',
+                        'thumbnail': 'https://via.placeholder.com/150',
+                      });
+                    }
                   }
+                  Navigator.pop(context);
                 }
-                Navigator.pop(context);
+              } catch (e) {
+                debugPrint("M3U Import Error: $e");
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -149,22 +226,22 @@ class _ChannelManagerState extends State<ChannelManager> {
           IconButton(icon: const Icon(Icons.add_circle_outline_rounded), onPressed: () {}),
         ],
       ),
-      body: ReorderableListView(
-        onReorder: (oldIndex, newIndex) {
-          // Implement reorder logic in Firebase
-        },
-        children: _channels.map((ch) => Card(
-          key: ValueKey(ch['id']),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: const Color(0xFF1A1A1A),
-          child: ListTile(
-            leading: const Icon(Icons.drag_indicator_rounded, color: Colors.white10),
-            title: Text(ch['title'] ?? ''),
-            subtitle: Text(ch['category'] ?? '', style: const TextStyle(color: Colors.redAccent, fontSize: 10)),
-            trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
+      body: _channels.isEmpty 
+        ? const Center(child: Text("No channels found. Use + or M3U Import."))
+        : ReorderableListView(
+            onReorder: (oldIndex, newIndex) {},
+            children: _channels.map((ch) => Card(
+              key: ValueKey(ch['id']),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFF1A1A1A),
+              child: ListTile(
+                leading: const Icon(Icons.drag_indicator_rounded, color: Colors.white10),
+                title: Text(ch['title'] ?? ''),
+                subtitle: Text(ch['category'] ?? '', style: const TextStyle(color: Colors.redAccent, fontSize: 10)),
+                trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
+              ),
+            )).toList(),
           ),
-        )).toList(),
-      ),
     );
   }
 }

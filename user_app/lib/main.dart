@@ -17,15 +17,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "AIzaSyDummyKey_ReplaceWithActual",
-      appId: "1:dummy:android:dummy",
-      messagingSenderId: "dummy",
-      projectId: "ummo-tv-be82a",
-      databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
-    ),
-  );
+  try {
+    // Attempt initialization but don't let it block the app forever if it fails
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyDummyKey_ReplaceWithActual",
+        appId: "1:dummy:android:dummy",
+        messagingSenderId: "dummy",
+        projectId: "ummo-tv-be82a",
+        databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
+      ),
+    ).timeout(const Duration(seconds: 5));
+  } catch (e) {
+    debugPrint("Firebase Init Error: $e");
+  }
 
   runApp(const MizofyUserApp());
 }
@@ -69,38 +74,59 @@ class _SecurityWrapperState extends State<SecurityWrapper> {
   }
 
   Future<void> _checkSecurity() async {
-    final deviceInfo = DeviceInfoPlugin();
-    final androidInfo = await deviceInfo.androidInfo;
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
 
-    if (!androidInfo.isPhysicalDevice) {
-      setState(() { _isBlocked = true; _isChecking = false; });
-      return;
+      // Emulator check (bypass for now if it hangs)
+      if (!androidInfo.isPhysicalDevice) {
+        // debugPrint("Emulator detected");
+        // setState(() { _isBlocked = true; _isChecking = false; });
+        // return;
+      }
+
+      final dangerousPackages = [
+        'com.guoshi.httpcanary',
+        'com.guoshi.httpcanary.premium',
+        'com.emanuelef.remote_capture',
+        'app.greyshirts.sslcapture',
+        'com.minhui.networkcapture'
+      ];
+
+      for (var pkg in dangerousPackages) {
+        try {
+          final bool isInstalled = await platform.invokeMethod('isPackageInstalled', {"packageName": pkg});
+          if (isInstalled) {
+            setState(() { _isBlocked = true; _isChecking = false; });
+            return;
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      debugPrint("Security Check Error: $e");
     }
 
-    final dangerousPackages = [
-      'com.guoshi.httpcanary',
-      'com.guoshi.httpcanary.premium',
-      'com.emanuelef.remote_capture',
-      'app.greyshirts.sslcapture',
-      'com.minhui.networkcapture'
-    ];
-
-    for (var pkg in dangerousPackages) {
-      try {
-        final bool isInstalled = await platform.invokeMethod('isPackageInstalled', {"packageName": pkg});
-        if (isInstalled) {
-          setState(() { _isBlocked = true; _isChecking = false; });
-          return;
-        }
-      } catch (e) {}
+    if (mounted) {
+      setState(() { _isChecking = false; });
     }
-
-    setState(() { _isChecking = false; });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isChecking) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFFF2D2D))));
+    if (_isChecking) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFFFF2D2D)),
+              const SizedBox(height: 20),
+              Text('Securing Connection...', style: GoogleFonts.outfit(color: Colors.white70)),
+            ],
+          ),
+        ),
+      );
+    }
     if (_isBlocked) {
       return Scaffold(
         body: Center(
@@ -153,43 +179,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _listenToData() {
-    _db.child('channels').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) {
-        setState(() {
-          _channels = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)}).toList();
-          _filter();
-        });
-      }
-    });
+    try {
+      _db.child('channels').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) {
+          setState(() {
+            _channels = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)}).toList();
+            _filter();
+          });
+        }
+      }, onError: (e) => debugPrint("DB Error Channels: $e"));
 
-    _db.child('categories').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) {
-        final List<Map<String, dynamic>> cats = data.entries
-            .map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)})
-            .toList();
-        cats.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
-        setState(() {
-          _categories = ['All', ...cats.map((c) => c['name'] as String)];
-        });
-      }
-    });
+      _db.child('categories').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) {
+          final List<Map<String, dynamic>> cats = data.entries
+              .map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value as Map)})
+              .toList();
+          cats.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+          setState(() {
+            _categories = ['All', ...cats.map((c) => c['name'] as String)];
+          });
+        }
+      });
 
-    _db.child('banners').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) setState(() => _banners = data.values.toList());
-    });
+      _db.child('banners').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) setState(() => _banners = data.values.toList());
+      });
 
-    _db.child('settings').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) setState(() => _settings = Map<String, dynamic>.from(data));
-    });
+      _db.child('settings').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) setState(() => _settings = Map<String, dynamic>.from(data));
+      });
 
-    _db.child('globalConfig').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) setState(() => _globalConfig = Map<String, dynamic>.from(data));
-    });
+      _db.child('globalConfig').onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data is Map) setState(() => _globalConfig = Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      debugPrint("Firebase Listen Error: $e");
+    }
   }
 
   void _filter() {
@@ -208,21 +238,24 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Mizofy <span style="color:#FF2D2D">TV</span>'.replaceAll('<span style="color:#FF2D2D">', '').replaceAll('</span>', ''), // Simple text for now
-                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+                  RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      children: const [
+                        TextSpan(text: 'Mizofy '),
+                        TextSpan(text: 'TV', style: TextStyle(color: Color(0xFFFF2D2D))),
+                      ],
+                    ),
                   ),
                   const Icon(Icons.share_rounded, color: Colors.white70),
                 ],
               ),
             ),
-
-            // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: TextField(
@@ -236,8 +269,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // Scrolling Alert Message
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty)
               Container(
                 height: 35,
@@ -254,12 +285,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   velocity: 50.0,
                 ),
               ),
-
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 children: [
-                  // Banner Section
                   if (_banners.isNotEmpty)
                     SizedBox(
                       height: 180,
@@ -271,12 +300,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             margin: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              image: DecorationImage(image: NetworkImage(b['imageUrl']), fit: BoxFit.cover),
+                              image: DecorationImage(image: NetworkImage(b['imageUrl'] ?? ''), fit: BoxFit.cover),
                             ),
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                gradient: LinearGradient(colors: [Colors.black, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter),
+                                gradient: const LinearGradient(colors: [Colors.black, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter),
                               ),
                               padding: const EdgeInsets.all(16),
                               alignment: Alignment.bottomLeft,
@@ -287,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(b['title'] ?? 'LIVE CRICKET', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                                   const SizedBox(height: 8),
                                   ElevatedButton.icon(
-                                    onPressed: () {},
+                                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PlayerScreen(channel: Map<String, dynamic>.from(b)))),
                                     icon: const Icon(Icons.play_arrow),
                                     label: const Text('WATCH STREAM'),
                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
@@ -299,15 +328,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ),
-
-                  // Unity Ad
                   if (_settings['showAds'] != false)
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: UnityBannerAd(placementId: 'Banner_Android'),
                     ),
-
-                  // Categories
                   SizedBox(
                     height: 50,
                     child: ListView.builder(
@@ -332,44 +357,44 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-
-                  // Live Channels Grid
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text('Live Channels', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.9),
-                    itemCount: _filteredChannels.length,
-                    itemBuilder: (context, i) {
-                      final ch = _filteredChannels[i];
-                      return GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PlayerScreen(channel: ch))),
-                        child: Container(
-                          decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(ch['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity))),
-                              Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(ch['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1),
-                                    Text(ch['category'] ?? '', style: const TextStyle(color: Colors.white24, fontSize: 10)),
-                                  ],
-                                ),
+                  _filteredChannels.isEmpty 
+                    ? const Center(child: Padding(padding: EdgeInsets.all(32), child: Text("Connecting to streams...", style: TextStyle(color: Colors.white24))))
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.9),
+                        itemCount: _filteredChannels.length,
+                        itemBuilder: (context, i) {
+                          final ch = _filteredChannels[i];
+                          return GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PlayerScreen(channel: ch))),
+                            child: Container(
+                              decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(ch['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c, e, s) => const Icon(Icons.tv, size: 50)))),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(ch['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        Text(ch['category'] ?? '', style: const TextStyle(color: Colors.white24, fontSize: 10)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
                 ],
               ),
             ),
