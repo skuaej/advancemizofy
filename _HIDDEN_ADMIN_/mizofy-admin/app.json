@@ -28,7 +28,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "baseUrl": "/hacu-tv/admin"
+      "baseUrl": "/mizofy-tv/admin"
     }
   }
 }

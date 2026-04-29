@@ -115,7 +115,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "baseUrl": "/hacu-tv"
+      "baseUrl": "/mizofy-tv"
     }
   }
 }
