@@ -50,13 +50,13 @@ export default function PlayerScreen() {
   ).current;
   const timerRef = useRef(null);
   const { channel } = route.params;
+  const isPlayingRef = useRef(isPlaying);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   useFocusEffect(
     useCallback(() => {
-      // Get current brightness on enter
       Brightness.getBrightnessAsync().then(b => setBrightnessVal(b)).catch(() => {});
       
-      // Ensure audio plays correctly
       Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         staysActiveInBackground: true,
@@ -67,17 +67,14 @@ export default function PlayerScreen() {
         playThroughEarpieceAndroid: false,
       });
 
-      // Handle App State for background playback
       const subscription = AppState.addEventListener('change', nextAppState => {
         if (nextAppState === 'background' || nextAppState === 'inactive') {
-          // Keep playing in background if it was playing
-          if (video.current && isPlaying) {
+          if (video.current && isPlayingRef.current) {
              video.current.playAsync();
           }
         }
       });
 
-      // Auto hide controls initially
       startTimer();
 
       return () => {
@@ -85,7 +82,7 @@ export default function PlayerScreen() {
         if (timerRef.current) clearTimeout(timerRef.current);
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
       };
-    }, [isPlaying])
+    }, [])
   );
 
   const startTimer = () => {
@@ -189,7 +186,15 @@ export default function PlayerScreen() {
   const url = (channel.url || '').toLowerCase();
   const isYouTube = channel.type === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
   const isWebEmbed = channel.type === 'embed';
-  const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (url.includes('.m3u8') || url.includes('.mpd') || url.includes('.ts') || !url.includes('.html')));
+  const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (url.includes('.m3u8') || url.includes('.mpd') || url.includes('.ts') || !url.includes('.html') || url.includes(':8000') || url.includes('/play/')));
+
+  const getExtension = () => {
+    if (url.includes('.mpd')) return 'mpd';
+    if (url.includes('.m3u8')) return 'm3u8';
+    if (url.includes('.ts')) return 'm3u8'; // Use m3u8 for TS streams as they are often HLS segments or play better with HLS decoder
+    if (url.includes(':8000') || url.includes('/play/')) return 'm3u8';
+    return undefined;
+  };
 
   return (
     <View style={styles.container}>
@@ -201,10 +206,7 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: channel.url?.includes('.mpd') ? 'mpd' : 
-                                              channel.url?.includes('.m3u8') ? 'm3u8' : 
-                                              channel.url?.includes('.ts') ? 'ts' : 
-                                              (channel.url?.includes(':8000') || channel.url?.includes('/play/')) ? 'm3u8' : undefined
+                overrideFileExtensionAndroid: getExtension()
               }}
               useNativeControls={useNative}
               resizeMode={resizeMode}
@@ -216,13 +218,7 @@ export default function PlayerScreen() {
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
               }}
               onError={(e) => {
-                console.log("Player Error, trying fallback...");
-                if (video.current) {
-                  video.current.loadAsync({ 
-                    uri: channel.url,
-                    overrideFileExtensionAndroid: 'm3u8' 
-                  }, {}, true);
-                }
+                console.log("Player Error:", e);
               }}
               onFullscreenUpdate={async ({ fullscreenUpdate }) => {
                 if (fullscreenUpdate === 1) {
