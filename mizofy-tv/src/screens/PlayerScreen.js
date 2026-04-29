@@ -60,11 +60,11 @@ export default function PlayerScreen() {
       
       Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
-        staysActiveInBackground: false,
+        staysActiveInBackground: true,
         interruptionModeIOS: 1, 
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
-        interruptionModeAndroid: 1, 
+        interruptionModeAndroid: 2, 
         playThroughEarpieceAndroid: false,
       });
 
@@ -201,7 +201,7 @@ export default function PlayerScreen() {
   const getExtension = () => {
     if (url.includes('.mpd')) return 'mpd';
     if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return undefined; // Let ExoPlayer auto-detect TS for better audio compatibility
+    if (url.includes('.ts')) return 'ts'; 
     if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
     return undefined;
   };
@@ -217,19 +217,19 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: undefined,
+                overrideFileExtensionAndroid: getExtension(),
                 headers: {
                   'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
+                  'Accept': '*/*',
+                  'Connection': 'keep-alive',
                 }
               }}
-              progressUpdateIntervalMillis={500}
               useNativeControls={useNative}
               resizeMode={resizeMode}
               isLooping={false}
               volume={1.0}
               shouldMute={false}
               shouldCorrectPitch={false}
-              shouldPlay={true}
               onPlaybackStatusUpdate={s => {
                 setStatus(s);
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
@@ -407,7 +407,7 @@ export default function PlayerScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Ionicons name="eye" size={20} color="#ff2d2d" />
-            <Text style={styles.statText}>  Live</Text>
+            <Text style={statText}>  Live</Text>
           </View>
           {isNativeVideo && (
             <TouchableOpacity style={styles.statBox} onPress={() => adjustVolume(volume > 0 ? -volume : 1)}>

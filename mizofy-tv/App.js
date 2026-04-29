@@ -13,9 +13,26 @@ import PlayerScreen from './src/screens/PlayerScreen';
 // Security
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Device from 'expo-device';
+import { Audio } from 'expo-av';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Global Audio Setup
+async function setupAudio() {
+  try {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      staysActiveInBackground: true,
+      interruptionModeIOS: 1, 
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      interruptionModeAndroid: 2, 
+      playThroughEarpieceAndroid: false,
+    });
+  } catch (e) { console.log("Audio Setup Error:", e); }
+}
+setupAudio();
 
 const customDarkTheme = {
   ...DarkTheme,
