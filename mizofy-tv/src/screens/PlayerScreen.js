@@ -64,7 +64,7 @@ export default function PlayerScreen() {
         staysActiveInBackground: true,
         interruptionModeIOS: 1, 
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
+        shouldDuckAndroid: false,
         interruptionModeAndroid: 2, 
         playThroughEarpieceAndroid: false,
       });
@@ -228,21 +228,20 @@ export default function PlayerScreen() {
               key={channel.url}
               ref={video}
               style={styles.video}
-              source={{ 
-                uri: channel.url,
-                overrideFileExtensionAndroid: getExtension(),
-                headers: {
-                  'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
-                  'Accept': '*/*',
-                  'Connection': 'keep-alive',
-                }
-              }}
+              source={{ uri: channel.url }}
               useNativeControls={useNative}
               resizeMode={resizeMode}
               isLooping={false}
               volume={1.0}
               shouldMute={false}
               shouldCorrectPitch={false}
+              shouldPlay={true}
+              onLoad={async () => {
+                if (video.current) {
+                  await video.current.setVolumeAsync(1.0);
+                  await video.current.setIsMutedAsync(false);
+                }
+              }}
               onPlaybackStatusUpdate={s => {
                 setStatus(s);
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
