@@ -6,6 +6,7 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as Brightness from 'expo-brightness';
 import { WebView } from 'react-native-webview';
+import * as IntentLauncher from 'expo-intent-launcher';
 import UnityAdBanner from '../components/UnityAdBanner';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -175,6 +176,18 @@ export default function PlayerScreen() {
       } catch (e) { console.log("Rate change not supported"); }
     }
     showControls();
+  };
+  
+  const openExternalPlayer = async () => {
+    try {
+      await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+        data: channel.url,
+        type: 'video/*',
+      });
+    } catch (e) {
+      console.log("External Player Error:", e);
+      alert("Please install VLC or MX Player to play this stream.");
+    }
   };
 
   const getYouTubeEmbedUrl = (url) => {
@@ -352,6 +365,12 @@ export default function PlayerScreen() {
                       }}
                     >
                       <Ionicons name="refresh" size={18} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.fullscreenBtn, {backgroundColor: '#ff2d2d'}]} 
+                      onPress={openExternalPlayer}
+                    >
+                      <Ionicons name="share-outline" size={18} color="#fff" />
                     </TouchableOpacity>
                   </View>
 
