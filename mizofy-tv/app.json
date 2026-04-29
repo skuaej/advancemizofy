@@ -99,6 +99,7 @@
     },
     "android": {
       "package": "com.mizofy.tv",
+      "usesCleartextTraffic": true,
       "supportsPictureInPicture": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

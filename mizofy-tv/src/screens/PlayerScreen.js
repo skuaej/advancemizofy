@@ -193,7 +193,11 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: 'ts'
+                overrideFileExtensionAndroid: 'ts',
+                headers: {
+                  'Icy-MetaData': '1',
+                  'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12'
+                }
               }}
               useNativeControls={false}
               resizeMode={resizeMode}
