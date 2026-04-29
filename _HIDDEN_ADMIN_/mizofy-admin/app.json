@@ -1,39 +1,38 @@
 {
-    "expo": {
-          "name": "Mizofy Admin",
-          "slug": "mizofy-admin",
-          "scheme": "mizofyadmin",
-          "version": "1.0.0",
-          "orientation": "portrait",
-          "icon": "./assets/icon.png",
-          "userInterfaceStyle": "dark",
-          "newArchEnabled": false,
-          "splash": {
-                  "image": "./assets/splash-icon.png",
-                  "resizeMode": "contain",
-                  "backgroundColor": "#0a0a0a"
-          },
-          "ios": {
-                  "supportsTablet": true
-          },
-          "android": {
-                  "package": "com.mizofy.admin",
-                  "supportsPictureInPicture": true,
-                  "adaptiveIcon": {
-                            "foregroundImage": "./assets/adaptive-icon.png",
-                            "backgroundColor": "#0a0a0a"
-                  },
-                  "edgeToEdgeEnabled": true
-          },
-          "web": {
-                  "favicon": "./assets/favicon.png",
-                  "bundler": "metro"
-          },
-          "plugins": [
-                  "expo-router"
-          ],
-          "experiments": {
-                  "typedRoutes": true
-          }
+  "expo": {
+    "name": "Hacu Admin",
+    "slug": "hacu-admin",
+    "scheme": "hacuadmin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.hacu.admin",
+      "supportsPictureInPicture": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "baseUrl": "/"
     }
+  }
 }
+
