@@ -55,6 +55,7 @@ export default function PlayerScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      Audio.setIsEnabledAsync(true);
       Brightness.getBrightnessAsync().then(b => setBrightnessVal(b)).catch(() => {});
       
       Audio.setAudioModeAsync({
@@ -223,7 +224,8 @@ export default function PlayerScreen() {
               resizeMode={resizeMode}
               isLooping={false}
               volume={volume}
-              shouldCorrectPitch={true}
+              shouldMute={false}
+              shouldCorrectPitch={false}
               onPlaybackStatusUpdate={s => {
                 setStatus(s);
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
