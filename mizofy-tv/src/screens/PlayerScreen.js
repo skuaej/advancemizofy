@@ -60,11 +60,11 @@ export default function PlayerScreen() {
       
       Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
-        staysActiveInBackground: true,
+        staysActiveInBackground: false,
         interruptionModeIOS: 1, 
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: false,
-        interruptionModeAndroid: 2, 
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: 1, 
         playThroughEarpieceAndroid: false,
       });
 
@@ -226,9 +226,10 @@ export default function PlayerScreen() {
               useNativeControls={useNative}
               resizeMode={resizeMode}
               isLooping={false}
-              volume={volume}
+              volume={1.0}
               shouldMute={false}
               shouldCorrectPitch={false}
+              shouldPlay={true}
               onPlaybackStatusUpdate={s => {
                 setStatus(s);
                 if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
