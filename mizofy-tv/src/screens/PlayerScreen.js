@@ -156,6 +156,14 @@ export default function PlayerScreen() {
   const url = (channel.url || '').toLowerCase();
   const isYouTube = channel.type === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
   const isWebEmbed = channel.type === 'embed';
+  const getExtension = () => {
+    if (url.includes('.mpd')) return 'mpd';
+    if (url.includes('.m3u8')) return 'm3u8';
+    if (url.includes('.ts')) return 'm3u8'; // This was the original working fix
+    if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
+    return undefined;
+  };
+
   const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (
     url.includes('.m3u8') || url.includes('.mpd') || url.includes('.ts') || 
     url.includes(':8000') || url.includes(':8080') || url.includes('/play/') ||
@@ -173,14 +181,7 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: 'ts',
-                headers: {
-                  'User-Agent': 'ummo.tv2/9.8 (Linux;Android 16) AndroidXMedia3/1.1.1',
-                  'Icy-MetaData': '1',
-                  'Accept-Encoding': 'identity',
-                  'Connection': 'Keep-Alive',
-                  'Referer': getBaseDomain(channel.url),
-                }
+                overrideFileExtensionAndroid: getExtension(),
               }}
               useNativeControls={false}
               resizeMode={resizeMode}
@@ -188,21 +189,11 @@ export default function PlayerScreen() {
               volume={1.0}
               shouldMute={false}
               shouldCorrectPitch={false}
-              shouldPlay={false} // Load without playing to allow track probing
+              shouldPlay={true}
               onLoad={async () => {
                 if (video.current) {
-                  // Wait for the engine to stabilize
-                  setTimeout(async () => {
-                    await video.current.setVolumeAsync(1.0);
-                    await video.current.setIsMutedAsync(false);
-                    await video.current.playAsync();
-                    setIsPlaying(true);
-                  }, 800);
-                  
-                  // Double check volume after playback starts
-                  setTimeout(async () => {
-                    if (video.current) await video.current.setVolumeAsync(1.0);
-                  }, 2000);
+                  await video.current.setVolumeAsync(1.0);
+                  await video.current.setIsMutedAsync(false);
                 }
               }}
               onPlaybackStatusUpdate={setStatus}
