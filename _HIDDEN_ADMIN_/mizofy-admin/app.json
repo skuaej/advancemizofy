@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Hacu Admin",
-    "slug": "hacu-admin",
-    "scheme": "hacuadmin",
+    "name": "Mizofy Admin",
+    "slug": "mizofy-admin",
+    "scheme": "mizofyadmin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.hacu.admin",
+      "package": "com.mizofy.admin",
       "supportsPictureInPicture": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -35,4 +35,5 @@
     }
   }
 }
+
 

@@ -37,7 +37,7 @@ jobs:
       - name: Upload Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hacu-Admin-APK
+          name: Mizofy-Admin-APK
           path: _HIDDEN_ADMIN_/mizofy-admin/android/app/build/outputs/apk/release/app-release.apk
 
   build-user:
@@ -73,7 +73,7 @@ jobs:
       - name: Upload User APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hacu-User-APK
+          name: Mizofy-User-APK
           path: mizofy-tv/android/app/build/outputs/apk/release/app-release.apk
 
   release:
@@ -86,19 +86,19 @@ jobs:
       - name: Download Admin APK
         uses: actions/download-artifact@v4
         with:
-          name: Hacu-Admin-APK
+          name: Mizofy-Admin-APK
           path: ./artifacts/admin
 
       - name: Download User APK
         uses: actions/download-artifact@v4
         with:
-          name: Hacu-User-APK
+          name: Mizofy-User-APK
           path: ./artifacts/user
 
       - name: Prepare APKs for Release
         run: |
-          cp ./artifacts/admin/app-release.apk ./HacuAdmin.apk
-          cp ./artifacts/user/app-release.apk ./HacuTV.apk
+          cp ./artifacts/admin/app-release.apk ./MizofyAdmin.apk
+          cp ./artifacts/user/app-release.apk ./MizofyTV.apk
 
       - name: Create Release and Upload APKs
         uses: softprops/action-gh-release@v1
@@ -108,7 +108,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./HacuAdmin.apk
-            ./HacuTV.apk
+            ./MizofyAdmin.apk
+            ./MizofyTV.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

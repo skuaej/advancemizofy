@@ -192,7 +192,8 @@ export default function PlayerScreen() {
                 uri: channel.url,
                 overrideFileExtensionAndroid: channel.url?.includes('.mpd') ? 'mpd' : 
                                               channel.url?.includes('.m3u8') ? 'm3u8' : 
-                                              channel.url?.includes('.ts') ? 'ts' : undefined
+                                              channel.url?.includes('.ts') ? 'ts' : 
+                                              (channel.url?.includes(':8000') || channel.url?.includes('/play/')) ? 'm3u8' : undefined
               }}
               useNativeControls={useNative}
               resizeMode={resizeMode}

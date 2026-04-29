@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Hacu TV",
-    "slug": "hacu-tv",
-    "scheme": "hacutv",
+    "name": "Mizofy TV",
+    "slug": "mizofy-tv",
+    "scheme": "mizofytv",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hacu.tv",
+      "bundleIdentifier": "com.mizofy.tv",
       "infoPlist": {
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "97r2b46745.skadnetwork" },
@@ -98,7 +98,7 @@
       }
     },
     "android": {
-      "package": "com.hacu.tv",
+      "package": "com.mizofy.tv",
       "supportsPictureInPicture": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -113,7 +113,7 @@
         {
           "action": "android.intent.action.VIEW",
           "data": {
-            "scheme": "hacutv"
+            "scheme": "mizofytv"
           }
         }
       ]
