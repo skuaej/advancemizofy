@@ -191,7 +191,10 @@ export default function PlayerScreen() {
               key={channel.url}
               ref={video}
               style={styles.video}
-              source={{ uri: channel.url }}
+              source={{ 
+                uri: channel.url,
+                overrideFileExtensionAndroid: 'ts'
+              }}
               useNativeControls={false}
               resizeMode={resizeMode}
               isLooping={false}
