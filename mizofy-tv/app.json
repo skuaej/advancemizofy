@@ -1,121 +1,44 @@
 {
-  "expo": {
-    "name": "Hacu TV",
-    "slug": "hacu-tv",
-    "scheme": "hacutv",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0a0a"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.hacu.tv",
-      "infoPlist": {
-        "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "97r2b46745.skadnetwork" },
-          { "SKAdNetworkIdentifier": "zmvfpc5aq8.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3sh42y64q3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "mlmmfzh3r3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork" },
-          { "SKAdNetworkIdentifier": "2u9pt9hc89.skadnetwork" },
-          { "SKAdNetworkIdentifier": "m8dbw4sv7c.skadnetwork" },
-          { "SKAdNetworkIdentifier": "238da6jt44.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4468km3ulz.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4w7y6s5ca2.skadnetwork" },
-          { "SKAdNetworkIdentifier": "a8cz6cu7e5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "77y3x8wds4.skadnetwork" },
-          { "SKAdNetworkIdentifier": "n9x2a789qt.skadnetwork" },
-          { "SKAdNetworkIdentifier": "hs6bdukanm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "f7s53z58qe.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v72qych5uu.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ydx93a7ass.skadnetwork" },
-          { "SKAdNetworkIdentifier": "9t245vhmpl.skadnetwork" },
-          { "SKAdNetworkIdentifier": "mp6xlyr22a.skadnetwork" },
-          { "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4pfyvq9l8r.skadnetwork" },
-          { "SKAdNetworkIdentifier": "kbd757ywx3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "k674qkevps.skadnetwork" },
-          { "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork" },
-          { "SKAdNetworkIdentifier": "feyaarzu9v.skadnetwork" },
-          { "SKAdNetworkIdentifier": "5f5u5tfb26.skadnetwork" },
-          { "SKAdNetworkIdentifier": "424m5254lk.skadnetwork" },
-          { "SKAdNetworkIdentifier": "p78axxw29g.skadnetwork" },
-          { "SKAdNetworkIdentifier": "e5fvkxwrpn.skadnetwork" },
-          { "SKAdNetworkIdentifier": "5a6flpkh64.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3qy4746246.skadnetwork" },
-          { "SKAdNetworkIdentifier": "klf5c3l5u5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "zq492l623r.skadnetwork" },
-          { "SKAdNetworkIdentifier": "22mmun2rn5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "av6w8kgt66.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v79kvwwj4g.skadnetwork" },
-          { "SKAdNetworkIdentifier": "44jx6755aq.skadnetwork" },
-          { "SKAdNetworkIdentifier": "32z4fx6l9h.skadnetwork" },
-          { "SKAdNetworkIdentifier": "w9q455wk68.skadnetwork" },
-          { "SKAdNetworkIdentifier": "xga6mpmplv.skadnetwork" },
-          { "SKAdNetworkIdentifier": "f38h382jlk.skadnetwork" },
-          { "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "x44k69ngh6.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork" },
-          { "SKAdNetworkIdentifier": "f73kdq92p3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "5l3tpt7t6e.skadnetwork" },
-          { "SKAdNetworkIdentifier": "wzmmz9fp6w.skadnetwork" },
-          { "SKAdNetworkIdentifier": "pwa73g5rt2.skadnetwork" },
-          { "SKAdNetworkIdentifier": "9nlqeag3gk.skadnetwork" },
-          { "SKAdNetworkIdentifier": "6yxyv74ff7.skadnetwork" },
-          { "SKAdNetworkIdentifier": "uw77j35x4d.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork" },
-          { "SKAdNetworkIdentifier": "lr83yxwka7.skadnetwork" },
-          { "SKAdNetworkIdentifier": "578prtvx9j.skadnetwork" },
-          { "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork" },
-          { "SKAdNetworkIdentifier": "wg4vff78zm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork" },
-          { "SKAdNetworkIdentifier": "mj797d8u6f.skadnetwork" },
-          { "SKAdNetworkIdentifier": "8s468mfl3y.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4dzt52r2t5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "vhf287vqwu.skadnetwork" },
-          { "SKAdNetworkIdentifier": "c6k4g5qg8m.skadnetwork" },
-          { "SKAdNetworkIdentifier": "5tjdwbrq8w.skadnetwork" },
-          { "SKAdNetworkIdentifier": "294l99pt4k.skadnetwork" },
-          { "SKAdNetworkIdentifier": "mqn7fxpca7.skadnetwork" },
-          { "SKAdNetworkIdentifier": "g6gcrrvk4p.skadnetwork" },
-          { "SKAdNetworkIdentifier": "tl55sbb4fm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "s39g8k73mm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "a2p9lx4jpn.skadnetwork" },
-          { "SKAdNetworkIdentifier": "k6y4y55b64.skadnetwork" },
-          { "SKAdNetworkIdentifier": "488r3q3dtq.skadnetwork" },
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
-          { "SKAdNetworkIdentifier": "9rd848q2bz.skadnetwork" },
-          { "SKAdNetworkIdentifier": "glqzh8vgby.skadnetwork" },
-          { "SKAdNetworkIdentifier": "5lm9lj6jb7.skadnetwork" }
-        ]
-      }
-    },
-    "android": {
-      "package": "com.hacu.tv",
-      "supportsPictureInPicture": true,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a0a0a"
-      },
-      "edgeToEdgeEnabled": true,
-      "permissions": ["RECEIVE_BOOT_COMPLETED", "WAKE_LOCK"],
-      "intentFilters": [
-        {
-          "action": "android.intent.action.VIEW",
-          "data": { "scheme": "hacutv" }
-        }
-      ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "baseUrl": "/"
+    "expo": {
+          "name": "Mizofy TV",
+          "slug": "mizofy-tv",
+          "scheme": "mizofytv",
+          "version": "1.0.0",
+          "orientation": "portrait",
+          "icon": "./assets/icon.png",
+          "userInterfaceStyle": "dark",
+          "newArchEnabled": true,
+          "splash": {
+                  "image": "./assets/splash-icon.png",
+                  "resizeMode": "contain",
+                  "backgroundColor": "#0a0a0a"
+          },
+          "ios": {
+                  "supportsTablet": true,
+                  "bundleIdentifier": "com.mizofy.tv",
+                  "infoPlist": {
+                            "SKAdNetworkItems": [
+                                        { "SKAdNetworkIdentifier": "97r2b46745.skadnetwork" },
+                                        { "SKAdNetworkIdentifier": "zmvfpc5aq8.skadnetwork" }
+                            ]
+                  }
+          },
+          "android": {
+                  "adaptiveIcon": {
+                            "foregroundImage": "./assets/adaptive-icon.png",
+                            "backgroundColor": "#ffffff"
+                  },
+                  "package": "com.mizofy.tv"
+          },
+          "web": {
+                  "favicon": "./assets/favicon.png",
+                  "bundler": "metro"
+          },
+          "plugins": [
+                  "expo-router"
+          ],
+          "experiments": {
+                  "typedRoutes": true
+          }
     }
-  }
 }
