@@ -71,13 +71,13 @@ class _AdminLoginState extends State<AdminLogin> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_outline_rounded, size: 64, color: Colors.red),
+              Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 20)]), child: const Icon(Icons.admin_panel_settings_rounded, size: 48, color: Colors.white)),
               const SizedBox(height: 24),
-              Text('Admin Access', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('MIZOFY ADMIN', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.black, letterSpacing: 1)),
               const SizedBox(height: 32),
-              TextField(controller: _passController, obscureText: true, decoration: InputDecoration(hintText: 'Password', filled: true, fillColor: Colors.black, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+              TextField(controller: _passController, obscureText: true, decoration: InputDecoration(hintText: 'Admin PIN', filled: true, fillColor: Colors.black, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
               const SizedBox(height: 24),
-              SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: _login, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), child: const Text('LOGIN'))),
+              SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: _login, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text('UNLOCK DASHBOARD'))),
             ],
           ),
         ),
@@ -177,7 +177,7 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
   void _confirmDeleteCategory(String id) {
     showDialog(context: context, builder: (context) => AlertDialog(
       title: const Text('Delete Category?'),
-      content: const Text('Warning: This will remove the category permanently.'),
+      content: const Text('Warning: This will remove all channels in this category.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
         ElevatedButton(onPressed: () { _db.child('categories/$id').remove(); Navigator.pop(context); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('DELETE')),
@@ -188,7 +188,7 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Content'), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: _addCategory)]),
+      appBar: AppBar(title: Text('MIZOFY CONTENT', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: _addCategory)]),
       body: Column(
         children: [
           SizedBox(
@@ -208,11 +208,11 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
                 onTap: () => setState(() => _selectedCategoryId = cat['id']),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(color: _selectedCategoryId == cat['id'] ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(color: _selectedCategoryId == cat['id'] ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white10), boxShadow: _selectedCategoryId == cat['id'] ? [BoxShadow(color: Colors.red.withOpacity(0.2), blurRadius: 5)] : null),
                   child: Center(child: Row(
                     children: [
-                      Text(cat['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text(cat['name']?.toUpperCase() ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5)),
                       const SizedBox(width: 8),
                       GestureDetector(onTap: () => _editCategory(cat['id'], cat['name']), child: const Icon(Icons.edit, size: 14, color: Colors.blue)),
                       const SizedBox(width: 8),
@@ -224,7 +224,7 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
             ),
           ),
           const Divider(color: Colors.white10),
-          Expanded(child: _selectedCategoryId == null ? const Center(child: Text("Select Category")) : ChannelListManager(categoryId: _selectedCategoryId!, categoryName: _categories.firstWhere((c) => c['id'] == _selectedCategoryId)['name'])),
+          Expanded(child: _selectedCategoryId == null ? const Center(child: Text("SELECT A CATEGORY TO MANAGE CHANNELS")) : ChannelListManager(categoryId: _selectedCategoryId!, categoryName: _categories.firstWhere((c) => c['id'] == _selectedCategoryId)['name'])),
         ],
       ),
     );
@@ -273,9 +273,9 @@ class _ChannelListManagerState extends State<ChannelListManager> {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              Expanded(child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'Search in ${widget.categoryName}...', prefixIcon: const Icon(Icons.search, size: 20), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
-              const SizedBox(width: 8),
-              IconButton(icon: const Icon(Icons.add_circle, color: Colors.green), onPressed: _addChannel),
+              Expanded(child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'Search in ${widget.categoryName}...', prefixIcon: const Icon(Icons.search, size: 20), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)))),
+              const SizedBox(width: 10),
+              FloatingActionButton.small(onPressed: _addChannel, backgroundColor: Colors.red, child: const Icon(Icons.add, color: Colors.white)),
             ],
           ),
         ),
@@ -292,16 +292,15 @@ class _ChannelListManagerState extends State<ChannelListManager> {
             },
             children: filtered.map((ch) => Card(
               key: ValueKey(ch['id']),
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               color: const Color(0xFF1A1A1A),
               child: ListTile(
-                leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(ch['thumbnail'] ?? '', width: 45, height: 45, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.tv))),
+                leading: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(ch['thumbnail'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.tv))),
                 title: Text(ch['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blue), onPressed: () => showDialog(context: context, builder: (context) => ChannelEditDialog(channel: ch, categoryName: widget.categoryName))),
-                  IconButton(icon: const Icon(Icons.delete, size: 20, color: Colors.red), onPressed: () {
-                    _db.child('channels/${ch['id']}').remove();
-                  }),
+                  IconButton(icon: const Icon(Icons.edit_note_rounded, size: 24, color: Colors.blue), onPressed: () => showDialog(context: context, builder: (context) => ChannelEditDialog(channel: ch, categoryName: widget.categoryName))),
+                  IconButton(icon: const Icon(Icons.delete_sweep_rounded, size: 24, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
                 ]),
               ),
             )).toList(),
@@ -340,11 +339,12 @@ class _ChannelEditDialogState extends State<ChannelEditDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.channel != null ? 'Edit Channel' : 'New Channel'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(widget.channel != null ? 'EDIT CHANNEL' : 'NEW CHANNEL', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title')),
-        TextField(controller: _url, decoration: const InputDecoration(labelText: 'Stream URL')),
-        TextField(controller: _thumb, decoration: const InputDecoration(labelText: 'Logo URL')),
+        TextField(controller: _title, decoration: const InputDecoration(labelText: 'Channel Title', labelStyle: TextStyle(fontSize: 12))),
+        TextField(controller: _url, decoration: const InputDecoration(labelText: 'Stream URL (m3u8/mpd)', labelStyle: TextStyle(fontSize: 12))),
+        TextField(controller: _thumb, decoration: const InputDecoration(labelText: 'Thumbnail URL', labelStyle: TextStyle(fontSize: 12))),
       ])),
       actions: [ElevatedButton(onPressed: () {
         final data = {'title': _title.text, 'url': _url.text, 'thumbnail': _thumb.text, 'categoryId': widget.categoryId ?? widget.channel!['categoryId'], 'category': widget.categoryName};
@@ -354,7 +354,7 @@ class _ChannelEditDialogState extends State<ChannelEditDialog> {
           FirebaseDatabase.instance.ref().child('channels').push().set(data);
         }
         Navigator.pop(context);
-      }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('SAVE'))],
+      }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: const Text('SAVE CHANGES'))],
     );
   }
 }
@@ -384,28 +384,29 @@ class _BannerManagerState extends State<BannerManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Banners'), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_circle, color: Colors.red), onPressed: () {
-        if (_banners.length >= 5) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Limit reached!'))); return; }
+      appBar: AppBar(title: Text('MIZOFY BANNERS', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent, actions: [IconButton(icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.red), onPressed: () {
+        if (_banners.length >= 5) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('MAX 5 BANNERS ALLOWED'))); return; }
         final t = TextEditingController(); final u = TextEditingController(); final i = TextEditingController();
         showDialog(context: context, builder: (context) => AlertDialog(
-          title: const Text('Add Banner'),
+          title: const Text('ADD NEW BANNER'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: t, decoration: const InputDecoration(hintText: 'Title')),
-            TextField(controller: i, decoration: const InputDecoration(hintText: 'Image URL')),
-            TextField(controller: u, decoration: const InputDecoration(hintText: 'Stream URL')),
+            TextField(controller: t, decoration: const InputDecoration(hintText: 'Display Title')),
+            TextField(controller: i, decoration: const InputDecoration(hintText: 'Image Link')),
+            TextField(controller: u, decoration: const InputDecoration(hintText: 'Stream/Action URL')),
           ]),
-          actions: [ElevatedButton(onPressed: () { _db.child('banners').push().set({'title': t.text, 'imageUrl': i.text, 'url': u.text}); Navigator.pop(context); }, child: const Text('ADD'))],
+          actions: [ElevatedButton(onPressed: () { _db.child('banners').push().set({'title': t.text, 'imageUrl': i.text, 'url': u.text}); Navigator.pop(context); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPLOAD'))],
         ));
       })]),
       body: ListView.builder(
         itemCount: _banners.length,
         itemBuilder: (context, i) => Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: const Color(0xFF1A1A1A),
           child: ListTile(
-            leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(_banners[i]['imageUrl'] ?? '', width: 80, height: 45, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image))),
+            leading: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(_banners[i]['imageUrl'] ?? '', width: 80, height: 45, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image))),
             title: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-            trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('banners/${_banners[i]['id']}').remove()),
+            trailing: IconButton(icon: const Icon(Icons.delete_forever_rounded, color: Colors.red), onPressed: () => _db.child('banners/${_banners[i]['id']}').remove()),
           ),
         ),
       ),
@@ -430,24 +431,24 @@ class _PushNotificationManagerState extends State<PushNotificationManager> {
     await FirebaseDatabase.instance.ref().child('notifications').push().set({
       'title': _title.text, 'body': _body.text, 'image': _image.text, 'timestamp': ServerValue.timestamp,
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification Dispatched!')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('BROADCAST SENT!')));
     _title.clear(); _body.clear(); _image.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Broadcast'), backgroundColor: Colors.transparent),
+      appBar: AppBar(title: Text('MIZOFY BROADCAST', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 20)), backgroundColor: Colors.transparent),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(children: [
-          TextField(controller: _title, decoration: const InputDecoration(labelText: 'Alert Title')),
+          TextField(controller: _title, decoration: const InputDecoration(labelText: 'Notification Title', filled: true, fillColor: Colors.white10)),
           const SizedBox(height: 16),
-          TextField(controller: _body, decoration: const InputDecoration(labelText: 'Message'), maxLines: 3),
+          TextField(controller: _body, decoration: const InputDecoration(labelText: 'Alert Message', filled: true, fillColor: Colors.white10), maxLines: 4),
           const SizedBox(height: 16),
-          TextField(controller: _image, decoration: const InputDecoration(labelText: 'Image Link')),
+          TextField(controller: _image, decoration: const InputDecoration(labelText: 'Banner Image Link (Optional)', filled: true, fillColor: Colors.white10)),
           const SizedBox(height: 40),
-          SizedBox(width: double.infinity, height: 55, child: ElevatedButton.icon(onPressed: _send, icon: const Icon(Icons.send), label: const Text('PUSH NOW'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
+          SizedBox(width: double.infinity, height: 55, child: ElevatedButton.icon(onPressed: _send, icon: const Icon(Icons.rocket_launch_rounded), label: const Text('SEND TO ALL USERS'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
         ]),
       ),
     );
@@ -493,28 +494,36 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), backgroundColor: Colors.transparent),
+      appBar: AppBar(title: Text('MIZOFY GLOBAL SETTINGS', style: GoogleFonts.outfit(fontWeight: FontWeight.black, fontSize: 18)), backgroundColor: Colors.transparent),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(children: [
-          Card(color: Colors.red.withOpacity(0.1), child: ListTile(title: const Text('Live User Count'), trailing: Text('$_userCount', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red)))),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.red.withOpacity(0.2))),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ACTIVE INSTALLS', style: TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold)), Text('Real-time Metrics', style: TextStyle(fontSize: 10, color: Colors.white38))]),
+              Text('$_userCount', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.black, color: Colors.red)),
+            ]),
+          ),
           const SizedBox(height: 32),
-          TextField(controller: _mq, decoration: const InputDecoration(labelText: 'Marquee Alert')),
+          TextField(controller: _mq, decoration: const InputDecoration(labelText: 'Home Marquee Alert')),
           const SizedBox(height: 24),
-          const Text('App Version Control', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-          TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest Version (e.g. 1.1.0)')),
-          TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Update Link (APK URL)')),
-          SwitchListTile(title: const Text('Force Update'), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
-          const Divider(height: 40),
-          TextField(controller: _wa, decoration: const InputDecoration(labelText: 'WhatsApp')),
-          TextField(controller: _tg, decoration: const InputDecoration(labelText: 'Telegram')),
-          TextField(controller: _sh, decoration: const InputDecoration(labelText: 'Share URL')),
-          const SizedBox(height: 32),
-          SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () {
+          const Align(alignment: Alignment.centerLeft, child: Text('FORCE UPDATE SYSTEM', style: TextStyle(fontWeight: FontWeight.black, fontSize: 12, color: Colors.blueAccent))),
+          const SizedBox(height: 12),
+          TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest App Version')),
+          TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Direct APK Download Link')),
+          SwitchListTile(title: const Text('Enable Mandatory Update'), subtitle: const Text('Blocks user until they update', style: TextStyle(fontSize: 10)), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
+          const Divider(height: 40, color: Colors.white10),
+          TextField(controller: _wa, decoration: const InputDecoration(labelText: 'WhatsApp Contact Link')),
+          TextField(controller: _tg, decoration: const InputDecoration(labelText: 'Telegram Channel Link')),
+          TextField(controller: _sh, decoration: const InputDecoration(labelText: 'App Sharing Message')),
+          const SizedBox(height: 40),
+          SizedBox(width: double.infinity, height: 55, child: ElevatedButton(onPressed: () {
             _db.child('settings').update({'whatsappLink': _wa.text, 'telegramLink': _tg.text, 'shareLink': _sh.text});
             _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'forceUpdate': _forceUpdate});
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings Saved!')));
-          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('SAVE ALL SETTINGS'))),
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GLOBAL CONFIG SYNCHRONIZED!')));
+          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), child: const Text('SAVE ALL CONFIGURATIONS'))),
         ]),
       ),
     );

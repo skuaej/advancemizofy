@@ -141,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic> _globalConfig = {};
   final PageController _bannerCtrl = PageController();
   Timer? _bannerTimer;
+  Map<String, List<dynamic>> _categoryCache = {};
 
   @override
   void initState() {
@@ -162,20 +163,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (snapshot.exists) {
       final config = Map<String, dynamic>.from(snapshot.value as Map);
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version;
-      final serverVersion = config['version'] ?? "1.0.0";
-      
-      if (currentVersion != serverVersion && config['forceUpdate'] == true) {
+      if (packageInfo.version != config['version'] && config['forceUpdate'] == true) {
         if (mounted) {
           showDialog(
-            context: context,
-            barrierDismissible: false,
+            context: context, barrierDismissible: false,
             builder: (c) => AlertDialog(
               title: const Text('Update Required'),
-              content: const Text('A new version of Mizofy TV is available. Please update to continue.'),
-              actions: [
-                ElevatedButton(onPressed: () => _open(config['updateUrl']), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPDATE NOW')),
-              ],
+              content: const Text('New version of Mizofy TV is available.'),
+              actions: [ElevatedButton(onPressed: () => _open(config['updateUrl']), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPDATE NOW'))],
             ),
           );
         }
@@ -184,10 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initUnityAds() {
-    UnityAds.init(
-      gameId: Platform.isAndroid ? '5611533' : '5611532',
-      testMode: false,
-    );
+    UnityAds.init(gameId: Platform.isAndroid ? '5611533' : '5611532', testMode: false);
   }
 
   void _showInterstitial(VoidCallback onComplete) {
@@ -203,44 +195,32 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); super.dispose(); }
 
   void _listen() {
-    // Fast one-time fetch for snappy start
-    _db.child('categories').get().then((snap) {
-      if (snap.exists && mounted) {
-        final data = snap.value as Map;
+    // Optimized: Fetch all once then listen for changes
+    _db.onValue.listen((event) {
+      if (event.snapshot.value is Map && mounted) {
+        final root = event.snapshot.value as Map;
         setState(() {
-          _categories = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
-          _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
-          if (_activeCategoryId == null && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
+          if (root['categories'] is Map) {
+            final catData = root['categories'] as Map;
+            _categories = catData.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+            _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+            if (_activeCategoryId == null && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
+          }
+          if (root['channels'] is Map) {
+            final chData = root['channels'] as Map;
+            _channels = chData.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+            _categoryCache.clear();
+            for (var ch in _channels) {
+              final cid = ch['categoryId']?.toString() ?? 'unknown';
+              _categoryCache.putIfAbsent(cid, () => []).add(ch);
+            }
+            _categoryCache.forEach((k, v) => v.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0)));
+          }
+          if (root['banners'] is Map) _banners = (root['banners'] as Map).values.take(5).toList();
+          if (root['settings'] is Map) _settings = Map<String, dynamic>.from(root['settings'] as Map);
+          if (root['globalConfig'] is Map) _globalConfig = Map<String, dynamic>.from(root['globalConfig'] as Map);
         });
       }
-    });
-
-    _db.child('categories').onValue.listen((e) {
-      if (e.snapshot.value is Map) {
-        final data = e.snapshot.value as Map;
-        setState(() {
-          _categories = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
-          _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
-        });
-      }
-    });
-    _db.child('channels').onValue.listen((e) {
-      if (e.snapshot.value is Map) {
-        final data = e.snapshot.value as Map;
-        setState(() => _channels = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList());
-      }
-    });
-    _db.child('banners').onValue.listen((e) {
-      if (e.snapshot.value is Map) {
-        final data = e.snapshot.value as Map;
-        setState(() => _banners = data.values.take(5).toList());
-      }
-    });
-    _db.child('settings').onValue.listen((e) {
-      if (e.snapshot.value is Map) setState(() => _settings = Map<String, dynamic>.from(e.snapshot.value as Map));
-    });
-    _db.child('globalConfig').onValue.listen((e) {
-      if (e.snapshot.value is Map) setState(() => _globalConfig = Map<String, dynamic>.from(e.snapshot.value as Map));
     });
   }
 
@@ -248,8 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _channels.where((ch) => ch['categoryId'] == _activeCategoryId).toList();
-    filtered.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+    final filtered = _categoryCache[_activeCategoryId] ?? [];
 
     return Scaffold(
       body: SafeArea(
@@ -260,9 +239,19 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Row(
                   children: [
-                    Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.tv_rounded, color: Colors.white, size: 20)),
-                    const SizedBox(width: 10),
-                    RichText(text: TextSpan(style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold), children: const [TextSpan(text: 'MIZOFY '), TextSpan(text: 'TV', style: TextStyle(color: Colors.red))])),
+                    Container(
+                      padding: const EdgeInsets.all(8), 
+                      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Colors.red, Color(0xFF8B0000)]), borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)]), 
+                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24)
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('MIZOFY', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.black, letterSpacing: 1.5)),
+                        Container(height: 2, width: 40, color: Colors.red),
+                      ],
+                    ),
                   ],
                 ),
                 IconButton(icon: const Icon(Icons.share_rounded), onPressed: () => _open(_settings['shareLink'])),
@@ -270,9 +259,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
-              Container(height: 20, child: Marquee(text: "${_globalConfig['alertMsg']}   •   ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10), velocity: 30.0)),
+              Container(height: 22, color: Colors.red.withOpacity(0.05), child: Marquee(text: "${_globalConfig['alertMsg']}   •   ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10), velocity: 30.0)),
 
             Expanded(child: ListView(
+              cacheExtent: 1000,
               children: [
                 if (_banners.isNotEmpty)
                   SizedBox(height: 240, child: PageView.builder(
@@ -282,12 +272,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(_banners[i]))))),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover)),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 5))]),
                         child: Container(
                           decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Colors.black, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.center)),
                           padding: const EdgeInsets.all(24),
                           alignment: Alignment.bottomLeft,
-                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
+                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 10)])),
                         ),
                       ),
                     ),
@@ -296,7 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_settings['showAds'] != false)
                   Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
 
-                SizedBox(height: 40, child: ListView.builder(
+                // Lower Height Categories
+                SizedBox(height: 42, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -305,28 +296,30 @@ class _HomeScreenState extends State<HomeScreen> {
                     final active = _activeCategoryId == cat['id'];
                     return GestureDetector(
                       onTap: () => setState(() => _activeCategoryId = cat['id']),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8, top: 2, bottom: 2), 
-                        padding: const EdgeInsets.symmetric(horizontal: 14), 
-                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)), 
-                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: active ? Colors.white : Colors.white60))),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(right: 10, top: 4, bottom: 4), 
+                        padding: const EdgeInsets.symmetric(horizontal: 18), 
+                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12), border: Border.all(color: active ? Colors.redAccent : Colors.white10), boxShadow: active ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 6)] : null), 
+                        child: Center(child: Text(cat['name']?.toUpperCase() ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.5, color: active ? Colors.white : Colors.white54))),
                       ),
                     );
                   },
                 )),
 
+                // Ultra-Fast Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.0),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.05),
                   itemCount: filtered.length,
                   itemBuilder: (c, i) => GestureDetector(
                     onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i])))),
                     child: Container(
-                      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
+                      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.05))), 
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 30, color: Colors.white10)))),
-                        Padding(padding: const EdgeInsets.all(10), child: Text(filtered[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(18)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Center(child: Icon(Icons.tv, size: 30, color: Colors.white10))))),
+                        Padding(padding: const EdgeInsets.all(10), child: Text(filtered[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white70))),
                       ]),
                     ),
                   ),
@@ -378,9 +371,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         children: [
           Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
           if (!isF) Positioned(top: 40, left: 10, child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context))),
-          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () {
-            platform.invokeMethod('enterPipMode');
-          }, child: const Icon(Icons.picture_in_picture_alt))),
+          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () => platform.invokeMethod('enterPipMode'), child: const Icon(Icons.picture_in_picture_alt))),
         ],
       )
     ));
