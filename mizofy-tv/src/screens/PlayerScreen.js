@@ -173,9 +173,9 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: 'ts',
+                overrideFileExtensionAndroid: 'm4v', // Spoof extension to trigger robust MP4 demuxer
                 headers: {
-                  'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
+                  'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
                   'Referer': getBaseDomain(channel.url),
                   'Origin': getBaseDomain(channel.url),
                   'Accept': '*/*',
