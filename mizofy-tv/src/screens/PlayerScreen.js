@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, PanResponder, StatusBar as RNStatusBar, AppState } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, PanResponder, StatusBar as RNStatusBar, AppState, Alert } from 'react-native';
 import { Video, ResizeMode, Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -23,7 +23,6 @@ export default function PlayerScreen() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [resizeMode, setResizeMode] = useState(ResizeMode.CONTAIN);
-  const [useNative, setUseNative] = useState(false);
   const [playerType, setPlayerType] = useState('native'); // native or web
   const [isLocked, setIsLocked] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
@@ -37,18 +36,17 @@ export default function PlayerScreen() {
         const { dx, dy, moveX } = gestureState;
         if (Math.abs(dy) > 10) {
           if (moveX > SCREEN_WIDTH / 2) {
-            adjustVolume(-dy / 500); // Swipe up to increase
+            adjustVolume(-dy / 500); 
           } else {
             adjustBrightness(-dy / 500);
           }
           showControls();
         }
       },
-      onPanResponderRelease: () => {
-        // Just hide bars after a delay
-      },
+      onPanResponderRelease: () => {},
     })
   ).current;
+
   const timerRef = useRef(null);
   const { channel } = route.params;
   const isPlayingRef = useRef(isPlaying);
@@ -59,16 +57,6 @@ export default function PlayerScreen() {
       Audio.setIsEnabledAsync(true);
       Brightness.getBrightnessAsync().then(b => setBrightnessVal(b)).catch(() => {});
       
-      Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        staysActiveInBackground: true,
-        interruptionModeIOS: 1, 
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: false,
-        interruptionModeAndroid: 2, 
-        playThroughEarpieceAndroid: false,
-      });
-
       const subscription = AppState.addEventListener('change', nextAppState => {
         if (nextAppState === 'background' || nextAppState === 'inactive') {
           if (video.current && isPlayingRef.current) {
@@ -91,7 +79,7 @@ export default function PlayerScreen() {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setControlsVisible(false);
-    }, 2000);
+    }, 3000);
   };
 
   const showControls = () => {
@@ -99,61 +87,44 @@ export default function PlayerScreen() {
     startTimer();
   };
 
-  // Volume controls
   const adjustVolume = async (delta) => {
     const newVol = Math.min(1.0, Math.max(0, volume + delta));
     setVolume(newVol);
-    if (video.current) {
-      await video.current.setVolumeAsync(newVol);
-    }
+    if (video.current) await video.current.setVolumeAsync(newVol);
     setShowVolumeBar(true);
     setTimeout(() => setShowVolumeBar(false), 1500);
   };
 
-  // Brightness controls
   const adjustBrightness = async (delta) => {
     const newBright = Math.min(1.0, Math.max(0.05, brightness + delta));
     setBrightnessVal(newBright);
     try {
       await Brightness.setBrightnessAsync(newBright);
-    } catch (e) { console.log('Brightness error:', e); }
+    } catch (e) {}
     setShowBrightnessBar(true);
     setTimeout(() => setShowBrightnessBar(false), 1500);
   };
 
-  // Play/Pause toggle
   const togglePlayPause = async () => {
-    if (isLocked) {
-      showControls();
-      return;
-    }
+    if (isLocked) { showControls(); return; }
     showControls();
     if (video.current) {
-      if (isPlaying) {
-        await video.current.pauseAsync();
-      } else {
-        await video.current.playAsync();
-      }
+      if (isPlaying) await video.current.pauseAsync();
+      else await video.current.playAsync();
       setIsPlaying(!isPlaying);
     }
   };
 
   const handleDoubleTap = (event) => {
-    if (isLocked) {
-      showControls();
-      return;
-    }
+    if (isLocked) { showControls(); return; }
     const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    if (lastTap && (now - lastTap) < DOUBLE_TAP_DELAY) {
+    if (lastTap && (now - lastTap) < 300) {
       const { locationX } = event.nativeEvent;
       if (locationX > SCREEN_WIDTH / 2) {
-        // Seek forward
         video.current?.getStatusAsync().then(s => {
           if (s.isLoaded) video.current.setPositionAsync(s.positionMillis + 10000);
         });
       } else {
-        // Seek backward
         video.current?.getStatusAsync().then(s => {
           if (s.isLoaded) video.current.setPositionAsync(s.positionMillis - 10000);
         });
@@ -164,20 +135,6 @@ export default function PlayerScreen() {
     }
   };
 
-  const changeSpeed = async () => {
-    const speeds = [1.0, 1.25, 1.5, 2.0, 0.5];
-    const nextIndex = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
-    const newSpeed = speeds[nextIndex];
-    setPlaybackSpeed(newSpeed);
-    // Only apply rate if it's 1.0 or if the video is loaded and supports it
-    if (video.current) {
-      try {
-        await video.current.setRateAsync(newSpeed, true);
-      } catch (e) { console.log("Rate change not supported"); }
-    }
-    showControls();
-  };
-  
   const openExternalPlayer = async () => {
     try {
       await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
@@ -185,57 +142,34 @@ export default function PlayerScreen() {
         type: 'video/*',
       });
     } catch (e) {
-      console.log("External Player Error:", e);
-      alert("Please install VLC or MX Player to play this stream.");
+      Alert.alert("Error", "Please install VLC or MX Player to play this stream.");
     }
-  };
-
-  const getYouTubeEmbedUrl = (url) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    const videoId = (match && match[2].length === 11) ? match[2] : url;
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&showinfo=0&rel=0`;
   };
 
   const url = (channel.url || '').toLowerCase();
   const isYouTube = channel.type === 'youtube' || url.includes('youtube.com') || url.includes('youtu.be');
   const isWebEmbed = channel.type === 'embed';
   const isNativeVideo = channel.type === 'stream' || (!isYouTube && !isWebEmbed && (
-    url.includes('.m3u8') || 
-    url.includes('.mpd') || 
-    url.includes('.ts') || 
-    url.includes(':8000') || 
-    url.includes(':8080') ||
-    url.includes('/play/') ||
-    url.includes('/live/') ||
-    !url.includes('.html')
+    url.includes('.m3u8') || url.includes('.mpd') || url.includes('.ts') || 
+    url.includes(':8000') || url.includes(':8080') || url.includes('/play/') ||
+    url.includes('/live/') || !url.includes('.html')
   ));
-
-  const getExtension = () => {
-    if (url.includes('.mpd')) return 'mpd';
-    if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return 'ts'; 
-    if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
-    return undefined;
-  };
 
   return (
     <View style={styles.container}>
       <View style={styles.videoContainer}>
         <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
-          {isNativeVideo && playerType === 'native' && channel.url ? (
+          {isNativeVideo && playerType === 'native' ? (
             <Video
               key={channel.url}
               ref={video}
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: 'ts', // Force TS for .ts streams
-                headers: {
-                  'User-Agent': 'Lavf/58.29.100', // Mimic FFmpeg/VLC core
-                }
+                overrideFileExtensionAndroid: 'ts',
+                headers: { 'User-Agent': 'Lavf/58.29.100' }
               }}
-              useNativeControls={true} // Use native controls to see if it fixes audio routing
+              useNativeControls={false}
               resizeMode={resizeMode}
               isLooping={false}
               volume={1.0}
@@ -248,20 +182,7 @@ export default function PlayerScreen() {
                   await video.current.setIsMutedAsync(false);
                 }
               }}
-              onPlaybackStatusUpdate={s => {
-                setStatus(s);
-                if (s.isPlaying !== undefined) setIsPlaying(s.isPlaying);
-              }}
-              onError={(e) => {
-                console.log("Player Error:", e);
-              }}
-              onFullscreenUpdate={async ({ fullscreenUpdate }) => {
-                if (fullscreenUpdate === 1) {
-                  await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-                } else if (fullscreenUpdate === 3 || fullscreenUpdate === 2) {
-                  await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
-                }
-              }}
+              onPlaybackStatusUpdate={setStatus}
             />
           ) : (
             <WebView
@@ -283,16 +204,10 @@ export default function PlayerScreen() {
                     <script>
                       if (mpegts.getFeatureList().mseLivePlayback) {
                         var videoElement = document.getElementById('videoElement');
-                        var player = mpegts.createPlayer({
-                          type: 'mse',
-                          isLive: true,
-                          url: '${channel.url}'
-                        });
+                        var player = mpegts.createPlayer({ type: 'mse', isLive: true, url: '${channel.url}' });
                         player.attachMediaElement(videoElement);
                         player.load();
-                        player.play().catch(function(e) {
-                          videoElement.play();
-                        });
+                        player.play();
                       } else {
                         var v = document.getElementById('videoElement');
                         v.src = '${channel.url}';
@@ -304,54 +219,91 @@ export default function PlayerScreen() {
                 `
               }}
               allowsFullscreenVideo={true}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              startInLoadingState={true}
-              mediaPlaybackRequiresUserAction={false}
             />
           )}
         </View>
 
-        {/* TAP DETECTOR */}
-        <TouchableOpacity 
-          style={StyleSheet.absoluteFill} 
-          onPress={handleDoubleTap} 
-          activeOpacity={1} 
-        >
-          {isNativeVideo && !useNative && controlsVisible && (
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleDoubleTap} activeOpacity={1}>
+          {controlsVisible && !isLocked && (
             <View style={styles.controlsOverlay}>
-              {/* Custom controls logic... */}
+              {/* TOP BAR */}
+              <View style={styles.topBar}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                  <Ionicons name="arrow-back" size={24} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>{channel.title}</Text>
+                <TouchableOpacity onPress={openExternalPlayer} style={styles.vlcBtn}>
+                  <Ionicons name="logo-playstation" size={24} color="#fff" />
+                  <Text style={styles.vlcText}>VLC</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* CENTER CONTROLS */}
+              <View style={styles.centerRow}>
+                <TouchableOpacity style={styles.mainPlayBtn} onPress={togglePlayPause}>
+                  <Ionicons name={isPlaying ? "pause" : "play"} size={45} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* BOTTOM BAR */}
+              <View style={styles.bottomBar}>
+                <TouchableOpacity style={styles.bottomIcon} onPress={() => setIsLocked(true)}>
+                  <Ionicons name="lock-open-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.bottomIcon} onPress={() => setPlayerType(playerType === 'native' ? 'web' : 'native')}>
+                  <Ionicons name={playerType === 'native' ? "globe-outline" : "tv-outline"} size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.bottomIcon} onPress={() => setResizeMode(resizeMode === ResizeMode.CONTAIN ? ResizeMode.STRETCH : ResizeMode.CONTAIN)}>
+                  <Ionicons name="expand-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
-        </TouchableOpacity>
 
-        {/* BACK BUTTON */}
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        
-        {/* EXTERNAL PLAYER BUTTON - TOP RIGHT */}
-        <TouchableOpacity style={styles.externalPlayerBtn} onPress={openExternalPlayer}>
-          <Ionicons name="share-outline" size={22} color="#fff" />
+          {isLocked && controlsVisible && (
+            <View style={styles.lockOverlay}>
+              <TouchableOpacity style={styles.lockBtnLarge} onPress={() => setIsLocked(false)}>
+                <Ionicons name="lock-closed" size={40} color="#fff" />
+                <Text style={{color: '#fff', marginTop: 10, fontWeight: 'bold'}}>UNLOCK</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {showVolumeBar && (
+            <View style={styles.indicatorOverlay}>
+              <Ionicons name="volume-high" size={28} color="#fff" />
+              <View style={styles.indicatorBarBg}>
+                <View style={[styles.indicatorBarFill, { width: `${volume * 100}%`, backgroundColor: '#ff2d2d' }]} />
+              </View>
+            </View>
+          )}
+
+          {showBrightnessBar && (
+            <View style={styles.indicatorOverlay}>
+              <Ionicons name="sunny" size={28} color="#fff" />
+              <View style={styles.indicatorBarBg}>
+                <View style={[styles.indicatorBarFill, { width: `${brightness * 100}%`, backgroundColor: '#ffcc00' }]} />
+              </View>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
       
       <View style={styles.infoContainer}>
         <Text style={styles.title}>{channel.title}</Text>
-        <Text style={styles.category}>{channel.category}</Text>
+        <Text style={styles.category}>{channel.category} • {channel.type === 'stream' ? 'Live Stream' : 'Video'}</Text>
+        <View style={styles.adSection}><UnityAdBanner /></View>
         
-        <TouchableOpacity 
-          style={styles.modeToggle} 
-          onPress={() => setUseNative(!useNative)}
-        >
-          <Ionicons name={useNative ? "options" : "options-outline"} size={20} color="#fff" />
-          <Text style={{color: '#fff', marginLeft: 10}}>
-            {useNative ? "Using Native Engine (Auto)" : "Using Custom Engine"}
-          </Text>
+        <TouchableOpacity style={styles.vlcActionBtn} onPress={openExternalPlayer}>
+          <Ionicons name="flash" size={20} color="#fff" />
+          <Text style={styles.vlcActionText}>FIX SOUND: PLAY IN VLC PLAYER</Text>
         </TouchableOpacity>
 
-        <View style={styles.adSection}>
-          <UnityAdBanner />
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Ionicons name="eye" size={20} color="#ff2d2d" />
+            <Text style={styles.statText}>  LIVE</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -362,23 +314,28 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
   videoContainer: { width: '100%', height: SCREEN_WIDTH * (9 / 16), backgroundColor: '#000' },
   video: { flex: 1 },
-  backButton: { 
-    position: 'absolute', top: 40, left: 15, zIndex: 10, 
-    padding: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20 
-  },
-  externalPlayerBtn: { 
-    position: 'absolute', top: 40, right: 15, zIndex: 10, 
-    padding: 8, backgroundColor: '#ff2d2d', borderRadius: 20 
-  },
-  modeToggle: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', 
-    padding: 15, borderRadius: 12, marginTop: 10
-  },
-  infoContainer: { padding: 20, flex: 1 },
-  title: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 5 },
-  category: { color: '#888', fontSize: 14, marginBottom: 20 },
-  adSection: { marginVertical: 10 },
-  statsRow: { flexDirection: 'row', marginTop: 20, gap: 12 },
-  statBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 12, borderRadius: 10 },
-  statText: { color: '#fff', fontWeight: 'bold' }
+  controlsOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'space-between', padding: 15 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backBtn: { padding: 5 },
+  headerTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', flex: 1, marginHorizontal: 15 },
+  vlcBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ff6600', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15 },
+  vlcText: { color: '#fff', fontWeight: 'bold', marginLeft: 5, fontSize: 12 },
+  centerRow: { alignItems: 'center', justifyContent: 'center' },
+  mainPlayBtn: { backgroundColor: 'rgba(255,45,45,0.8)', width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  bottomBar: { flexDirection: 'row', justifyContent: 'space-around', paddingBottom: 10 },
+  bottomIcon: { padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
+  lockOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)' },
+  lockBtnLarge: { alignItems: 'center' },
+  indicatorOverlay: { position: 'absolute', top: '40%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 15, gap: 10 },
+  indicatorBarBg: { width: 100, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
+  indicatorBarFill: { height: '100%', borderRadius: 2 },
+  infoContainer: { padding: 20 },
+  title: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  category: { color: '#888', fontSize: 14, marginVertical: 5 },
+  vlcActionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6600', padding: 15, borderRadius: 12, marginTop: 15 },
+  vlcActionText: { color: '#fff', fontWeight: 'bold', marginLeft: 10 },
+  adSection: { marginVertical: 15 },
+  statsRow: { flexDirection: 'row', gap: 10 },
+  statBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 10, borderRadius: 8 },
+  statText: { color: '#fff', fontWeight: 'bold', fontSize: 12 }
 });
