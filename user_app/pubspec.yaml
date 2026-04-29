@@ -48,7 +48,7 @@ dependencies:
   package_info_plus: ^9.0.1
   url_launcher: ^6.3.2
   marquee: ^2.2.3
-  firebase_messaging: ^15.3.0
+  firebase_messaging: ^15.2.10
   flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
