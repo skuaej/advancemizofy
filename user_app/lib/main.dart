@@ -6,15 +6,26 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pip_view/pip_view.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:marquee/marquee.dart';
 import 'dart:async';
+import 'dart:io';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  
   try {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -25,12 +36,31 @@ void main() async {
         databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
       ),
     ).timeout(const Duration(seconds: 5));
-    // Increment User Count once per session
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await FirebaseMessaging.instance.subscribeToTopic('all_users');
+    
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      if (notification != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          const NotificationDetails(android: AndroidNotificationDetails('mizofy_channel', 'Mizofy Notifications', importance: Importance.max, priority: Priority.high, icon: '@mipmap/ic_launcher')),
+        );
+      }
+    });
+
     FirebaseDatabase.instance.ref().child('totalUsers').runTransaction((count) {
       if (count == null) return Transaction.success(1);
       return Transaction.success((count as int) + 1);
     });
   } catch (e) {}
+  
   runApp(const MizofyUserApp());
 }
 
@@ -74,7 +104,6 @@ class _SecurityWrapperState extends State<SecurityWrapper> {
 
   void _check() async {
     try {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
       final dangerousPackages = ['com.guoshi.httpcanary', 'com.guoshi.httpcanary.premium', 'com.emanuelef.remote_capture', 'app.greyshirts.sslcapture', 'com.minhui.networkcapture'];
       for (var pkg in dangerousPackages) {
         try {
@@ -116,28 +145,36 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _listen();
-    _initAds();
-    _startBannerAutoSlide();
-  }
-
-  void _startBannerAutoSlide() {
+    _initUnityAds();
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_banners.isNotEmpty && _bannerCtrl.hasClients) {
         int next = (_bannerCtrl.page?.toInt() ?? 0) + 1;
         if (next >= _banners.length) next = 0;
-        _bannerCtrl.animateToPage(next, duration: const Duration(milliseconds: 800), curve: Curves.easeInOut);
+        _bannerCtrl.animateToPage(next, duration: const Duration(milliseconds: 1000), curve: Curves.easeInOut);
       }
     });
   }
 
-  @override
-  void dispose() {
-    _bannerTimer?.cancel();
-    _bannerCtrl.dispose();
-    super.dispose();
+  void _initUnityAds() {
+    UnityAds.init(
+      gameId: Platform.isAndroid ? '5611533' : '5611532',
+      testMode: false,
+      onComplete: () => debugPrint('Unity Ads Initialized'),
+      onFailed: (e, m) => debugPrint('Unity Ads Failed: $m'),
+    );
   }
 
-  void _initAds() => UnityAds.init(gameId: '6099899');
+  void _showInterstitial(VoidCallback onComplete) {
+    UnityAds.showVideoAd(
+      placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
+      onComplete: (placementId) => onComplete(),
+      onSkipped: (placementId) => onComplete(),
+      onFailed: (placementId, error, message) => onComplete(),
+    );
+  }
+
+  @override
+  void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); super.dispose(); }
 
   void _listen() {
     _db.child('categories').onValue.listen((e) {
@@ -189,32 +226,38 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ),
             
-            // Fixed Marquee: Only show if alertMsg exists and is long enough to scroll
-            if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty)
+            if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
               Container(
-                height: 30,
+                height: 25,
                 child: Marquee(
-                  text: "${_globalConfig['alertMsg']}   •   ",
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
-                  velocity: 40.0,
-                  blankSpace: 20.0,
+                  text: "${_globalConfig['alertMsg']}  •  ",
+                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+                  velocity: 35.0,
                 ),
               ),
 
             Expanded(child: ListView(
               children: [
                 if (_banners.isNotEmpty)
-                  SizedBox(height: 180, child: PageView.builder(
+                  SizedBox(height: 220, child: PageView.builder(
                     controller: _bannerCtrl,
                     itemCount: _banners.length,
                     itemBuilder: (c, i) => GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(_banners[i])))),
-                      child: Container(margin: const EdgeInsets.all(16), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover))),
+                      onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(_banners[i]))))),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10), 
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover)),
+                        child: Container(
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Colors.black87, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.center)),
+                          padding: const EdgeInsets.all(20),
+                          alignment: Alignment.bottomLeft,
+                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
+                        ),
+                      ),
                     ),
                   )),
                 
-                // Categories
-                SizedBox(height: 55, child: ListView.builder(
+                SizedBox(height: 45, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -224,28 +267,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _activeCategoryId = cat['id']),
                       child: Container(
-                        margin: const EdgeInsets.only(right: 10, top: 5, bottom: 5), 
-                        padding: const EdgeInsets.symmetric(horizontal: 24), 
-                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
-                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: active ? Colors.white : Colors.white70))),
+                        margin: const EdgeInsets.only(right: 8, top: 4, bottom: 4), 
+                        padding: const EdgeInsets.symmetric(horizontal: 16), 
+                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)), 
+                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: active ? Colors.white : Colors.white60))),
                       ),
                     );
                   },
                 )),
 
-                // Channels Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.85),
                   itemCount: filtered.length,
                   itemBuilder: (c, i) => GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i]))),
+                    onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i])))),
                     child: Container(
                       decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 50, color: Colors.white10)))),
-                        Padding(padding: const EdgeInsets.all(12), child: Text(filtered[i]['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 40, color: Colors.white10)))),
+                        Padding(padding: const EdgeInsets.all(12), child: Text(filtered[i]['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                       ]),
                     ),
                   ),
@@ -258,9 +300,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: const Color(0xFF25D366), child: const Icon(Icons.chat, color: Colors.white, size: 20)),
-          const SizedBox(height: 10),
-          if (_settings['telegramLink'] != null) FloatingActionButton(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: const Color(0xFF0088CC), child: const Icon(Icons.send, color: Colors.white)),
+          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: const Color(0xFF25D366), child: const Icon(Icons.chat, color: Colors.white, size: 18)),
+          const SizedBox(height: 8),
+          if (_settings['telegramLink'] != null) FloatingActionButton.small(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: const Color(0xFF0088CC), child: const Icon(Icons.send, color: Colors.white, size: 18)),
         ],
       ),
     );
@@ -290,6 +332,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PIPView(builder: (c, isF) => Scaffold(backgroundColor: Colors.black, body: Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl)))));
+    return PIPView(builder: (c, isF) => Scaffold(
+      backgroundColor: Colors.black, 
+      body: Stack(
+        children: [
+          Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
+          if (!isF) Positioned(top: 40, left: 10, child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context))),
+          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () => PIPView.of(context).presentFloating(const MizofyUserApp()), child: const Icon(Icons.picture_in_picture_alt))),
+        ],
+      )
+    ));
   }
 }
