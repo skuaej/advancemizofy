@@ -12,9 +12,9 @@ import { WebView } from 'react-native-webview';
  */
 
 export const UNITY_CONFIG = {
-  PROJECT_ID: 'b1f0c7d8-20d9-48ed-92a1-36694f2d4314',
-  ANDROID_GAME_ID: '5611533',
-  IOS_GAME_ID: '5611532',
+  PROJECT_ID: '41e8a3b2-6982-4d5f-9e7a-03b561f75b26',
+  ANDROID_GAME_ID: '6099899',
+  IOS_GAME_ID: '6099898',
   PLACEMENTS: {
     BANNER: 'Banner_Android',
     INTERSTITIAL: 'Interstitial_Android',

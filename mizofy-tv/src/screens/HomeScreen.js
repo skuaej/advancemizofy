@@ -154,7 +154,7 @@ export default function HomeScreen() {
         <Ionicons name="shield-outline" size={80} color="#ff2d2d" />
         <Text style={{color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 20}}>Security Error</Text>
         <Text style={{color: '#aaa', textAlign: 'center', marginTop: 10}}>
-          Network capture tools or VPNs are not allowed while using Mizofy TV. Please disable them to continue.
+          Network capture tools or VPNs are not allowed while using Hacu TV. Please disable them to continue.
         </Text>
         <TouchableOpacity 
           style={{marginTop: 30, backgroundColor: '#333', padding: 15, borderRadius: 10}}
@@ -173,7 +173,7 @@ export default function HomeScreen() {
         <Ionicons name="cloud-download" size={80} color="#ff2d2d" />
         <Text style={{color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 20}}>Update Required</Text>
         <Text style={{color: '#aaa', textAlign: 'center', marginTop: 10, marginBottom: 30}}>
-          A new version of Mizofy TV is available. You must update to continue watching streams safely.
+          A new version of Hacu TV is available. You must update to continue watching streams safely.
         </Text>
         <TouchableOpacity 
           style={{backgroundColor: '#ff2d2d', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 25}}
