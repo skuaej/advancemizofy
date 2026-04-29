@@ -173,13 +173,13 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: 'm4v', // Spoof extension to trigger robust MP4 demuxer
+                overrideFileExtensionAndroid: 'ts',
                 headers: {
-                  'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
+                  'User-Agent': 'ummo.tv2/9.8 (Linux;Android 16) AndroidXMedia3/1.1.1',
+                  'Icy-MetaData': '1',
+                  'Accept-Encoding': 'identity',
+                  'Connection': 'Keep-Alive',
                   'Referer': getBaseDomain(channel.url),
-                  'Origin': getBaseDomain(channel.url),
-                  'Accept': '*/*',
-                  'Connection': 'keep-alive',
                 }
               }}
               useNativeControls={false}
