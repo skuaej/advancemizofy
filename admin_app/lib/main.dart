@@ -196,7 +196,11 @@ class PushNotificationManager extends StatelessWidget {
                 onPressed: () {},
                 icon: const Icon(Icons.send_rounded),
                 label: const Text('SEND NOTIFICATION', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2D2D), foregroundColor: Colors.white, borderRadius: BorderRadius.circular(12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF2D2D),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
           ],
