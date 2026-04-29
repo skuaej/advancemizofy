@@ -1,9 +1,12 @@
 package mizofy.user.app
 
 import io.flutter.embedding.android.FlutterActivity
+import android.content.pm.PackageManager
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import android.content.pm.PackageManager
+import android.app.PictureInPictureParams
+import android.util.Rational
+import android.os.Build
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "mizofy.user/security"
@@ -13,11 +16,11 @@ class MainActivity: FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "isPackageInstalled") {
                 val packageName = call.argument<String>("packageName")
-                if (packageName != null) {
-                    result.success(isPackageInstalled(packageName))
-                } else {
-                    result.error("INVALID_ARGS", "Package name is null", null)
-                }
+                val isInstalled = isPackageInstalled(packageName!!)
+                result.success(isInstalled)
+            } else if (call.method == "enterPipMode") {
+                enterPip()
+                result.success(true)
             } else {
                 result.notImplemented()
             }
@@ -30,6 +33,23 @@ class MainActivity: FlutterActivity() {
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
+        }
+    }
+
+    private fun enterPip() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val params = PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(16, 9))
+                .build()
+            enterPictureInPictureMode(params)
+        }
+    }
+
+    // Automatic PiP on Minimize (Home Button)
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            enterPip()
         }
     }
 }

@@ -206,7 +206,6 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
               children: _categories.map((cat) => GestureDetector(
                 key: ValueKey(cat['id']),
                 onTap: () => setState(() => _selectedCategoryId = cat['id']),
-                onLongPress: () => _editCategory(cat['id'], cat['name']),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -214,8 +213,10 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
                   child: Center(child: Row(
                     children: [
                       Text(cat['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(width: 6),
-                      GestureDetector(onTap: () => _confirmDeleteCategory(cat['id']), child: const Icon(Icons.close, size: 12, color: Colors.white24)),
+                      const SizedBox(width: 8),
+                      GestureDetector(onTap: () => _editCategory(cat['id'], cat['name']), child: const Icon(Icons.edit, size: 14, color: Colors.blue)),
+                      const SizedBox(width: 8),
+                      GestureDetector(onTap: () => _confirmDeleteCategory(cat['id']), child: const Icon(Icons.delete, size: 14, color: Colors.red)),
                     ],
                   )),
                 ),
@@ -426,7 +427,6 @@ class _PushNotificationManagerState extends State<PushNotificationManager> {
 
   void _send() async {
     if (_title.text.isEmpty || _body.text.isEmpty) return;
-    // Sending to Firebase node so app can listen via onValue if messaging is tricky in CI
     await FirebaseDatabase.instance.ref().child('notifications').push().set({
       'title': _title.text, 'body': _body.text, 'image': _image.text, 'timestamp': ServerValue.timestamp,
     });

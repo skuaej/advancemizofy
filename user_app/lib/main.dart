@@ -41,6 +41,8 @@ void main() async {
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    
+    // Subscribe to broadcast topic
     await FirebaseMessaging.instance.subscribeToTopic('all_users');
     
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -159,17 +161,17 @@ class _HomeScreenState extends State<HomeScreen> {
     UnityAds.init(
       gameId: Platform.isAndroid ? '5611533' : '5611532',
       testMode: false,
-      onComplete: () => debugPrint('Unity Ads Initialized'),
-      onFailed: (e, m) => debugPrint('Unity Ads Failed: $m'),
+      onComplete: () => debugPrint('Unity Ads Success'),
+      onFailed: (e, m) => debugPrint('Unity Ads Error: $m'),
     );
   }
 
   void _showInterstitial(VoidCallback onComplete) {
     UnityAds.showVideoAd(
       placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
-      onComplete: (placementId) => onComplete(),
-      onSkipped: (placementId) => onComplete(),
-      onFailed: (placementId, error, message) => onComplete(),
+      onComplete: (p) => onComplete(),
+      onSkipped: (p) => onComplete(),
+      onFailed: (p, e, m) => onComplete(),
     );
   }
 
@@ -227,14 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
-              Container(
-                height: 25,
-                child: Marquee(
-                  text: "${_globalConfig['alertMsg']}  •  ",
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
-                  velocity: 35.0,
-                ),
-              ),
+              Container(height: 25, child: Marquee(text: "${_globalConfig['alertMsg']}  •  ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11), velocity: 35.0)),
 
             Expanded(child: ListView(
               children: [
@@ -257,6 +252,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )),
                 
+                // Banner Ad
+                if (_settings['showAds'] != false)
+                  Padding(padding: const EdgeInsets.all(8.0), child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS')),
+
                 SizedBox(height: 45, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
@@ -320,6 +319,7 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   late final Player player = Player();
   late final VideoController ctrl = VideoController(player);
+  static const platform = MethodChannel('mizofy.user/security');
 
   @override
   void initState() {
@@ -338,7 +338,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
         children: [
           Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
           if (!isF) Positioned(top: 40, left: 10, child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context))),
-          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () => PIPView.of(context).presentFloating(const MizofyUserApp()), child: const Icon(Icons.picture_in_picture_alt))),
+          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () {
+            platform.invokeMethod('enterPipMode');
+          }, child: const Icon(Icons.picture_in_picture_alt))),
         ],
       )
     ));
