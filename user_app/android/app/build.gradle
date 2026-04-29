@@ -45,6 +45,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    packagingOptions {
+        exclude 'lib/x86/*'
+        exclude 'lib/x86_64/*'
+        exclude 'lib/mips/*'
+        exclude 'lib/mips64/*'
+    }
 }
 
 flutter {

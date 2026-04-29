@@ -464,7 +464,9 @@ class GlobalSettingsManager extends StatefulWidget {
 class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   final _db = FirebaseDatabase.instance.ref();
   int _userCount = 0;
+  bool _forceUpdate = false;
   final _wa = TextEditingController(); final _tg = TextEditingController(); final _sh = TextEditingController(); final _mq = TextEditingController();
+  final _ver = TextEditingController(); final _upd = TextEditingController();
 
   @override
   void initState() {
@@ -477,7 +479,14 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
       }
     });
     _db.child('globalConfig').onValue.listen((e) {
-      if (e.snapshot.value is Map) _mq.text = (e.snapshot.value as Map)['alertMsg'] ?? '';
+      if (e.snapshot.value is Map) {
+        final d = e.snapshot.value as Map;
+        _mq.text = d['alertMsg'] ?? '';
+        _ver.text = d['version'] ?? '1.0.0';
+        _upd.text = d['updateUrl'] ?? '';
+        _forceUpdate = d['forceUpdate'] ?? false;
+        setState(() {});
+      }
     });
   }
 
@@ -490,15 +499,22 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
         child: Column(children: [
           Card(color: Colors.red.withOpacity(0.1), child: ListTile(title: const Text('Live User Count'), trailing: Text('$_userCount', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red)))),
           const SizedBox(height: 32),
-          TextField(controller: _mq, decoration: const InputDecoration(labelText: 'Marquee Alert (Empty to hide)')),
+          TextField(controller: _mq, decoration: const InputDecoration(labelText: 'Marquee Alert')),
+          const SizedBox(height: 24),
+          const Text('App Version Control', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+          TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest Version (e.g. 1.1.0)')),
+          TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Update Link (APK URL)')),
+          SwitchListTile(title: const Text('Force Update'), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
+          const Divider(height: 40),
           TextField(controller: _wa, decoration: const InputDecoration(labelText: 'WhatsApp')),
           TextField(controller: _tg, decoration: const InputDecoration(labelText: 'Telegram')),
           TextField(controller: _sh, decoration: const InputDecoration(labelText: 'Share URL')),
-          const SizedBox(height: 24),
-          ElevatedButton(onPressed: () {
+          const SizedBox(height: 32),
+          SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () {
             _db.child('settings').update({'whatsappLink': _wa.text, 'telegramLink': _tg.text, 'shareLink': _sh.text});
-            _db.child('globalConfig').update({'alertMsg': _mq.text});
-          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPDATE ALL')),
+            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'forceUpdate': _forceUpdate});
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings Saved!')));
+          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('SAVE ALL SETTINGS'))),
         ]),
       ),
     );

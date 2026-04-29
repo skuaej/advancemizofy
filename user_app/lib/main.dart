@@ -12,6 +12,7 @@ import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:marquee/marquee.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -145,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _listen();
+    _checkUpdate();
     _initUnityAds();
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_banners.isNotEmpty && _bannerCtrl.hasClients) {
@@ -153,6 +155,32 @@ class _HomeScreenState extends State<HomeScreen> {
         _bannerCtrl.animateToPage(next, duration: const Duration(milliseconds: 1000), curve: Curves.easeInOut);
       }
     });
+  }
+
+  void _checkUpdate() async {
+    final snapshot = await _db.child('globalConfig').get();
+    if (snapshot.exists) {
+      final config = Map<String, dynamic>.from(snapshot.value as Map);
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+      final serverVersion = config['version'] ?? "1.0.0";
+      
+      if (currentVersion != serverVersion && config['forceUpdate'] == true) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (c) => AlertDialog(
+              title: const Text('Update Required'),
+              content: const Text('A new version of Mizofy TV is available. Please update to continue.'),
+              actions: [
+                ElevatedButton(onPressed: () => _open(config['updateUrl']), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPDATE NOW')),
+              ],
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _initUnityAds() {
@@ -175,13 +203,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); super.dispose(); }
 
   void _listen() {
+    // Fast one-time fetch for snappy start
+    _db.child('categories').get().then((snap) {
+      if (snap.exists && mounted) {
+        final data = snap.value as Map;
+        setState(() {
+          _categories = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+          _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+          if (_activeCategoryId == null && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
+        });
+      }
+    });
+
     _db.child('categories').onValue.listen((e) {
       if (e.snapshot.value is Map) {
         final data = e.snapshot.value as Map;
         setState(() {
           _categories = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
           _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
-          if (_activeCategoryId == null && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
         });
       }
     });
@@ -219,12 +258,17 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                RichText(text: TextSpan(style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold), children: const [TextSpan(text: 'Mizofy '), TextSpan(text: 'TV', style: TextStyle(color: Colors.red))])),
+                Row(
+                  children: [
+                    Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.tv_rounded, color: Colors.white, size: 20)),
+                    const SizedBox(width: 10),
+                    RichText(text: TextSpan(style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold), children: const [TextSpan(text: 'MIZOFY '), TextSpan(text: 'TV', style: TextStyle(color: Colors.red))])),
+                  ],
+                ),
                 IconButton(icon: const Icon(Icons.share_rounded), onPressed: () => _open(_settings['shareLink'])),
               ]),
             ),
             
-            // Fixed Marquee: Remove "Hi"
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
               Container(height: 20, child: Marquee(text: "${_globalConfig['alertMsg']}   •   ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10), velocity: 30.0)),
 
@@ -252,7 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_settings['showAds'] != false)
                   Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
 
-                // Lower Height Categories
                 SizedBox(height: 40, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
@@ -272,7 +315,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 )),
 
-                // Lower Height Channel Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
