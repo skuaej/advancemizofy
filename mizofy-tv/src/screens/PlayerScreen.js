@@ -63,7 +63,7 @@ export default function PlayerScreen() {
         interruptionModeIOS: 1, 
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
-        interruptionModeAndroid: 2, 
+        interruptionModeAndroid: 1, 
         playThroughEarpieceAndroid: false,
       });
 
@@ -200,7 +200,7 @@ export default function PlayerScreen() {
   const getExtension = () => {
     if (url.includes('.mpd')) return 'mpd';
     if (url.includes('.m3u8')) return 'm3u8';
-    if (url.includes('.ts')) return 'ts'; // Correct extension for MPEG-TS files
+    if (url.includes('.ts')) return undefined; // Let ExoPlayer auto-detect TS for better audio compatibility
     if (url.includes(':8000') || url.includes(':8080') || url.includes('/play/')) return 'm3u8';
     return undefined;
   };
@@ -218,6 +218,7 @@ export default function PlayerScreen() {
                 uri: channel.url,
                 overrideFileExtensionAndroid: getExtension()
               }}
+              progressUpdateIntervalMillis={500}
               useNativeControls={useNative}
               resizeMode={resizeMode}
               isLooping={false}
