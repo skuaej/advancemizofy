@@ -28,7 +28,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "baseUrl": "/mizofy-tv/admin"
+      "baseUrl": "/mizofy-tv/admin/"
     }
   }
 }
