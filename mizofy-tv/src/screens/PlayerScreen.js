@@ -63,8 +63,8 @@ export default function PlayerScreen() {
         staysActiveInBackground: true,
         interruptionModeIOS: 1, 
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        interruptionModeAndroid: 1, 
+        shouldDuckAndroid: false,
+        interruptionModeAndroid: 2, 
         playThroughEarpieceAndroid: false,
       });
 
@@ -217,7 +217,7 @@ export default function PlayerScreen() {
               style={styles.video}
               source={{ 
                 uri: channel.url,
-                overrideFileExtensionAndroid: getExtension(),
+                overrideFileExtensionAndroid: undefined,
                 headers: {
                   'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
                 }
