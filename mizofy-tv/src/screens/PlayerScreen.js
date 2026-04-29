@@ -135,6 +135,13 @@ export default function PlayerScreen() {
     }
   };
 
+  const getBaseDomain = (url) => {
+    try {
+      const match = url.match(/^(https?:\/\/[^\/]+)/);
+      return match ? match[1] : url;
+    } catch (e) { return url; }
+  };
+
   const openExternalPlayer = async () => {
     try {
       await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
@@ -167,7 +174,13 @@ export default function PlayerScreen() {
               source={{ 
                 uri: channel.url,
                 overrideFileExtensionAndroid: 'ts',
-                headers: { 'User-Agent': 'Lavf/58.29.100' }
+                headers: {
+                  'User-Agent': 'VLC/3.0.12 LibVLC/3.0.12',
+                  'Referer': getBaseDomain(channel.url),
+                  'Origin': getBaseDomain(channel.url),
+                  'Accept': '*/*',
+                  'Connection': 'keep-alive',
+                }
               }}
               useNativeControls={false}
               resizeMode={resizeMode}
