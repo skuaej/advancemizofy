@@ -188,11 +188,21 @@ export default function PlayerScreen() {
               volume={1.0}
               shouldMute={false}
               shouldCorrectPitch={false}
-              shouldPlay={true}
+              shouldPlay={false} // Load without playing to allow track probing
               onLoad={async () => {
                 if (video.current) {
-                  await video.current.setVolumeAsync(1.0);
-                  await video.current.setIsMutedAsync(false);
+                  // Wait for the engine to stabilize
+                  setTimeout(async () => {
+                    await video.current.setVolumeAsync(1.0);
+                    await video.current.setIsMutedAsync(false);
+                    await video.current.playAsync();
+                    setIsPlaying(true);
+                  }, 800);
+                  
+                  // Double check volume after playback starts
+                  setTimeout(async () => {
+                    if (video.current) await video.current.setVolumeAsync(1.0);
+                  }, 2000);
                 }
               }}
               onPlaybackStatusUpdate={setStatus}
