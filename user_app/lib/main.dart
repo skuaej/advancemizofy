@@ -25,7 +25,7 @@ void main() async {
         databaseURL: "https://ummo-tv-be82a-default-rtdb.firebaseio.com",
       ),
     ).timeout(const Duration(seconds: 5));
-    // Increment User Count
+    // Increment User Count once per session
     FirebaseDatabase.instance.ref().child('totalUsers').runTransaction((count) {
       if (count == null) return Transaction.success(1);
       return Transaction.success((count as int) + 1);
@@ -133,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _bannerTimer?.cancel();
+    _bannerCtrl.dispose();
     super.dispose();
   }
 
@@ -158,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _db.child('banners').onValue.listen((e) {
       if (e.snapshot.value is Map) {
         final data = e.snapshot.value as Map;
-        setState(() => _banners = data.values.take(5).toList()); // Only 5 banners
+        setState(() => _banners = data.values.take(5).toList());
       }
     });
     _db.child('settings').onValue.listen((e) {
@@ -174,6 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _channels.where((ch) => ch['categoryId'] == _activeCategoryId).toList();
+    filtered.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -185,8 +188,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(icon: const Icon(Icons.share_rounded), onPressed: () => _open(_settings['shareLink'])),
               ]),
             ),
+            
+            // Fixed Marquee: Only show if alertMsg exists and is long enough to scroll
             if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty)
-              Container(height: 30, child: Marquee(text: _globalConfig['alertMsg'], style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+              Container(
+                height: 30,
+                child: Marquee(
+                  text: "${_globalConfig['alertMsg']}   •   ",
+                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
+                  velocity: 40.0,
+                  blankSpace: 20.0,
+                ),
+              ),
+
             Expanded(child: ListView(
               children: [
                 if (_banners.isNotEmpty)
@@ -198,8 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(margin: const EdgeInsets.all(16), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover))),
                     ),
                   )),
-                // Categories Scroll
-                SizedBox(height: 50, child: ListView.builder(
+                
+                // Categories
+                SizedBox(height: 55, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -208,22 +223,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     final active = _activeCategoryId == cat['id'];
                     return GestureDetector(
                       onTap: () => setState(() => _activeCategoryId = cat['id']),
-                      child: Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 20), decoration: BoxDecoration(color: active ? Colors.red : Colors.white10, borderRadius: BorderRadius.circular(20)), child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, color: active ? Colors.white : Colors.white60)))),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 10, top: 5, bottom: 5), 
+                        padding: const EdgeInsets.symmetric(horizontal: 24), 
+                        decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
+                        child: Center(child: Text(cat['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: active ? Colors.white : Colors.white70))),
+                      ),
                     );
                   },
                 )),
+
                 // Channels Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.9),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.85),
                   itemCount: filtered.length,
                   itemBuilder: (c, i) => GestureDetector(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i]))),
-                    child: Container(decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv)))),
-                      Padding(padding: const EdgeInsets.all(12), child: Text(filtered[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold))),
-                    ])),
+                    child: Container(
+                      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)), 
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.tv, size: 50, color: Colors.white10)))),
+                        Padding(padding: const EdgeInsets.all(12), child: Text(filtered[i]['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      ]),
+                    ),
                   ),
                 ),
               ],
@@ -234,9 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: Colors.green, child: const Icon(Icons.chat, color: Colors.white)),
-          const SizedBox(height: 8),
-          if (_settings['telegramLink'] != null) FloatingActionButton(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: Colors.blue, child: const Icon(Icons.send, color: Colors.white)),
+          if (_settings['whatsappLink'] != null) FloatingActionButton.small(heroTag: 'wa', onPressed: () => _open(_settings['whatsappLink']), backgroundColor: const Color(0xFF25D366), child: const Icon(Icons.chat, color: Colors.white, size: 20)),
+          const SizedBox(height: 10),
+          if (_settings['telegramLink'] != null) FloatingActionButton(heroTag: 'tg', onPressed: () => _open(_settings['telegramLink']), backgroundColor: const Color(0xFF0088CC), child: const Icon(Icons.send, color: Colors.white)),
         ],
       ),
     );
@@ -258,7 +282,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    // Optimized for HLS / m3u8
     player.open(Media(widget.channel['url'] ?? '', httpHeaders: {'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16'}));
   }
 
