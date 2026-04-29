@@ -19,6 +19,14 @@ export default function CategoryContentScreen() {
   const [m3uModal, setM3uModal] = useState(false);
   const [m3uUrl, setM3uUrl] = useState('');
   const [swapSelectedId, setSwapSelectedId] = useState(null);
+  const [bulkAddModal, setBulkAddModal] = useState(false);
+  const [bulkAddText, setBulkAddText] = useState('');
+  
+  // Bulk Selection State
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -36,8 +44,65 @@ export default function CategoryContentScreen() {
       setChannels(list.sort((a, b) => (a.order || 0) - (b.order || 0)));
       setLoading(false);
     });
+
+    // Fetch categories for "Move to Category" feature
+    onValue(ref(database, 'categories'), (s) => {
+      const data = s.val();
+      if (data) setCategories(Object.keys(data).map(k => data[k].name));
+    });
+
     return () => unsubscribe();
   }, [category]);
+
+  const toggleSelection = (id) => {
+    if (selectedIds.includes(id)) {
+      const newSelected = selectedIds.filter(i => i !== id);
+      setSelectedIds(newSelected);
+      if (newSelected.length === 0) setIsSelectionMode(false);
+    } else {
+      setSelectedIds([...selectedIds, id]);
+      setIsSelectionMode(true);
+    }
+  };
+
+  const handleLongPress = (id) => {
+    if (!isSelectionMode) {
+      setIsSelectionMode(true);
+      setSelectedIds([id]);
+    }
+  };
+
+  const bulkDelete = () => {
+    Alert.alert("Bulk Delete", `Delete ${selectedIds.length} selected channels?`, [
+      { text: "Cancel" },
+      { text: "Delete All", style: 'destructive', onPress: async () => {
+        const updates = {};
+        selectedIds.forEach(id => {
+          updates[`channels/${id}`] = null;
+        });
+        await update(ref(database), updates);
+        setSelectedIds([]);
+        setIsSelectionMode(false);
+        Alert.alert("Success", "Channels deleted");
+      }}
+    ]);
+  };
+
+  const bulkMove = async (targetCategory) => {
+    if (targetCategory === category) {
+      setMoveModalVisible(false);
+      return;
+    }
+    const updates = {};
+    selectedIds.forEach(id => {
+      updates[`channels/${id}/category`] = targetCategory;
+    });
+    await update(ref(database), updates);
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+    setMoveModalVisible(false);
+    Alert.alert("Success", `Moved ${selectedIds.length} channels to ${targetCategory}`);
+  };
 
   const filteredChannels = channels.filter(c => 
     c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -81,6 +146,10 @@ export default function CategoryContentScreen() {
   };
 
   const editChannel = (item) => {
+    if (isSelectionMode) {
+      toggleSelection(item.id);
+      return;
+    }
     setEditingId(item.id);
     setForm({
       title: item.title,
@@ -204,16 +273,103 @@ export default function CategoryContentScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>{category}</Text>
         <View style={{flexDirection: 'row', gap: 10}}>
-          <TouchableOpacity onPress={() => handleM3UImport()}>
-            <Ionicons name="cloud-download-outline" size={28} color="#4CAF50" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { setEditingId(null); setModalVisible(true); }}>
-            <Ionicons name="add-circle" size={32} color="#ff2d2d" />
-          </TouchableOpacity>
+          {isSelectionMode ? (
+            <>
+              <TouchableOpacity onPress={() => setMoveModalVisible(true)}>
+                <Ionicons name="move" size={28} color="#4FC3F7" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={bulkDelete}>
+                <Ionicons name="trash" size={28} color="#ff2d2d" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setIsSelectionMode(false)}>
+                <Ionicons name="close-circle" size={28} color="#fff" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity onPress={() => setBulkAddModal(true)}>
+                <Ionicons name="list-outline" size={28} color="#FF9800" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleM3UImport()}>
+                <Ionicons name="cloud-download-outline" size={28} color="#4CAF50" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setEditingId(null); setModalVisible(true); }}>
+                <Ionicons name="add-circle" size={32} color="#ff2d2d" />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 
-      {/* M3U IMPORT MODAL (Simple prompt for URL) */}
+      {/* BULK MOVE MODAL */}
+      <Modal visible={moveModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalHeader}>Move {selectedIds.length} items to:</Text>
+            <ScrollView style={{maxHeight: 300}}>
+              {categories.map(cat => (
+                <TouchableOpacity 
+                  key={cat} 
+                  style={[styles.catOption, cat === category && {opacity: 0.5}]} 
+                  disabled={cat === category}
+                  onPress={() => bulkMove(cat)}
+                >
+                  <Text style={styles.catOptionText}>{cat}</Text>
+                  {cat === category && <Text style={{color: '#444', fontSize: 10}}> Current</Text>}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setMoveModalVisible(false)}>
+              <Text style={styles.btnText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* BULK ADD MODAL */}
+      <Modal visible={bulkAddModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalHeader}>Bulk Add (One URL per line)</Text>
+            <TextInput 
+              style={[styles.input, {height: 150}]} 
+              placeholder={"http://example.com/stream1.m3u8\nhttp://example.com/stream2.ts"} 
+              placeholderTextColor="#444"
+              multiline
+              value={bulkAddText}
+              onChangeText={setBulkAddText}
+            />
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setBulkAddModal(false)}>
+                <Text style={styles.btnText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submitBtn} onPress={async () => {
+                const urls = bulkAddText.split('\n').map(u => u.trim()).filter(u => u.length > 5);
+                if (urls.length === 0) return;
+                setLoading(true);
+                setBulkAddModal(false);
+                let maxOrder = channels.length > 0 ? Math.max(...channels.map(c => c.order || 0)) : -1;
+                for (let url of urls) {
+                  await push(ref(database, 'channels'), {
+                    title: url.split('/').pop().split('?')[0] || 'New Channel',
+                    url: url,
+                    category,
+                    type: 'auto',
+                    order: ++maxOrder
+                  });
+                }
+                setBulkAddText('');
+                setLoading(false);
+                Alert.alert("Success", `Added ${urls.length} channels`);
+              }}>
+                <Text style={styles.btnText}>ADD ALL</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* M3U IMPORT MODAL */}
       <Modal visible={m3uModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -242,7 +398,7 @@ export default function CategoryContentScreen() {
         <Ionicons name="search" size={20} color="#666" />
         <TextInput 
           style={styles.searchInput} 
-          placeholder={`Search in ${category}...`} 
+          placeholder={isSelectionMode ? `${selectedIds.length} items selected` : `Search in ${category}...`} 
           placeholderTextColor="#666"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -256,22 +412,41 @@ export default function CategoryContentScreen() {
           data={filteredChannels}
           keyExtractor={item => item.id}
           renderItem={({ item, index }) => (
-            <View style={[styles.card, swapSelectedId === item.id && styles.cardSelected]}>
+            <TouchableOpacity 
+              style={[
+                styles.card, 
+                swapSelectedId === item.id && styles.cardSelected,
+                selectedIds.includes(item.id) && styles.cardMultiSelected
+              ]}
+              onPress={() => isSelectionMode ? toggleSelection(item.id) : null}
+              onLongPress={() => handleLongPress(item.id)}
+              activeOpacity={0.7}
+            >
               <View style={styles.orderControls}>
-                <TouchableOpacity 
-                  style={[styles.swapBtn, swapSelectedId === item.id && styles.swapBtnActive]} 
-                  onPress={() => handleSwap(item)}
-                >
-                  <Ionicons name={swapSelectedId === item.id ? "swap-horizontal" : "reorder-four"} size={22} color="#fff" />
-                </TouchableOpacity>
-                <View style={{marginTop: 5}}>
-                  <TouchableOpacity onPress={() => moveChannel(index, -1)} disabled={index === 0}>
-                    <Ionicons name="chevron-up" size={18} color={index === 0 ? "#222" : "#555"} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => moveChannel(index, 1)} disabled={index === channels.length - 1}>
-                    <Ionicons name="chevron-down" size={18} color={index === channels.length - 1 ? "#222" : "#555"} />
-                  </TouchableOpacity>
-                </View>
+                {isSelectionMode ? (
+                  <Ionicons 
+                    name={selectedIds.includes(item.id) ? "checkbox" : "square-outline"} 
+                    size={24} 
+                    color={selectedIds.includes(item.id) ? "#ff2d2d" : "#444"} 
+                  />
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.swapBtn, swapSelectedId === item.id && styles.swapBtnActive]} 
+                      onPress={() => handleSwap(item)}
+                    >
+                      <Ionicons name={swapSelectedId === item.id ? "swap-horizontal" : "reorder-four"} size={22} color="#fff" />
+                    </TouchableOpacity>
+                    <View style={{marginTop: 5}}>
+                      <TouchableOpacity onPress={() => moveChannel(index, -1)} disabled={index === 0}>
+                        <Ionicons name="chevron-up" size={18} color={index === 0 ? "#222" : "#555"} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => moveChannel(index, 1)} disabled={index === channels.length - 1}>
+                        <Ionicons name="chevron-down" size={18} color={index === channels.length - 1 ? "#222" : "#555"} />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
               <Image source={{ uri: item.thumbnail || 'https://via.placeholder.com/150' }} style={styles.img} />
               <View style={styles.info}>
@@ -279,15 +454,17 @@ export default function CategoryContentScreen() {
                 <Text style={styles.u} numberOfLines={1}>{item.url}</Text>
                 <Text style={styles.typeTag}>{item.type?.toUpperCase() || 'AUTO'} {item.episode ? `• EP ${item.episode}` : ''}</Text>
               </View>
-              <View style={styles.actions}>
-                <TouchableOpacity onPress={() => editChannel(item)}>
-                  <Ionicons name="create-outline" size={24} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteChannel(item.id)}>
-                  <Ionicons name="trash-outline" size={24} color="#ff2d2d" />
-                </TouchableOpacity>
-              </View>
-            </View>
+              {!isSelectionMode && (
+                <View style={styles.actions}>
+                  <TouchableOpacity onPress={() => editChannel(item)}>
+                    <Ionicons name="create-outline" size={24} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteChannel(item.id)}>
+                    <Ionicons name="trash-outline" size={24} color="#ff2d2d" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
           )}
         />
       )}
@@ -383,6 +560,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: '#fff', height: 45, marginLeft: 10 },
   card: { flexDirection: 'row', padding: 12, backgroundColor: '#111', margin: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#222' },
   cardSelected: { borderColor: '#ff2d2d', backgroundColor: '#1a0000' },
+  cardMultiSelected: { borderColor: '#ff2d2d', backgroundColor: '#1a1a1a' },
   orderControls: { paddingRight: 10, justifyContent: 'center', alignItems: 'center' },
   swapBtn: { backgroundColor: '#222', padding: 8, borderRadius: 8, marginBottom: 2 },
   swapBtnActive: { backgroundColor: '#ff2d2d' },
@@ -410,5 +588,7 @@ const styles = StyleSheet.create({
   modalBtns: { flexDirection: 'row', gap: 10 },
   cancelBtn: { flex: 1, backgroundColor: '#222', padding: 15, borderRadius: 10, alignItems: 'center' },
   submitBtn: { flex: 1, backgroundColor: '#ff2d2d', padding: 15, borderRadius: 10, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold' }
+  btnText: { color: '#fff', fontWeight: 'bold' },
+  catOption: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#222', flexDirection: 'row', alignItems: 'center' },
+  catOptionText: { color: '#fff', fontSize: 16 }
 });

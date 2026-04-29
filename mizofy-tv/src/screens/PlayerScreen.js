@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, PanResponder, StatusBar as RNStatusBar } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, PanResponder, StatusBar as RNStatusBar, AppState } from 'react-native';
 import { Video, ResizeMode, Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -67,14 +67,25 @@ export default function PlayerScreen() {
         playThroughEarpieceAndroid: false,
       });
 
+      // Handle App State for background playback
+      const subscription = AppState.addEventListener('change', nextAppState => {
+        if (nextAppState === 'background' || nextAppState === 'inactive') {
+          // Keep playing in background if it was playing
+          if (video.current && isPlaying) {
+             video.current.playAsync();
+          }
+        }
+      });
+
       // Auto hide controls initially
       startTimer();
 
       return () => {
+        subscription.remove();
         if (timerRef.current) clearTimeout(timerRef.current);
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
       };
-    }, [])
+    }, [isPlaying])
   );
 
   const startTimer = () => {
