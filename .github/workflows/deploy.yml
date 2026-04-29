@@ -35,9 +35,21 @@ jobs:
         run: |
           mkdir -p combined_dist
           touch combined_dist/.nojekyll
+          
+          # Copy User app to root
           cp -r ./mizofy-tv/dist/* ./combined_dist/
+          
+          # Copy Admin app to /admin
           mkdir -p ./combined_dist/admin
           cp -r ./_HIDDEN_ADMIN_/mizofy-admin/dist/* ./combined_dist/admin/
+          
+          # Patch User App index.html
+          sed -i 's/src="\//src="\/mizofy-tv\//g' ./combined_dist/index.html
+          sed -i 's/href="\//href="\/mizofy-tv\//g' ./combined_dist/index.html
+          
+          # Patch Admin App index.html
+          sed -i 's/src="\//src="\/mizofy-tv\/admin\//g' ./combined_dist/admin/index.html
+          sed -i 's/href="\//href="\/mizofy-tv\/admin\//g' ./combined_dist/admin/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
