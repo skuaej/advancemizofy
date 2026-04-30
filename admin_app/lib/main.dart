@@ -478,7 +478,8 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   int _userCount = 0;
   bool _forceUpdate = false;
   final _wa = TextEditingController(); final _tg = TextEditingController(); final _sh = TextEditingController(); final _mq = TextEditingController();
-  final _ver = TextEditingController(); final _upd = TextEditingController();
+  final _ver = TextEditingController(); final _upd = TextEditingController(); final _notes = TextEditingController();
+  int _cacheVersion = 0;
 
   @override
   void initState() {
@@ -496,7 +497,9 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
         _mq.text = d['alertMsg'] ?? '';
         _ver.text = d['version'] ?? '1.0.0';
         _upd.text = d['updateUrl'] ?? '';
+        _notes.text = d['releaseNotes'] ?? '';
         _forceUpdate = d['forceUpdate'] ?? false;
+        _cacheVersion = d['cacheVersion'] ?? 0;
         setState(() {});
       }
     });
@@ -524,15 +527,36 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
           const SizedBox(height: 12),
           TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest App Version')),
           TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Direct APK Download Link')),
+          TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Release Notes / What\'s New'), maxLines: 2),
           SwitchListTile(title: const Text('Enable Mandatory Update'), subtitle: const Text('Blocks user until they update', style: TextStyle(fontSize: 10)), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
           const Divider(height: 40, color: Colors.white10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('CATEGORY CACHE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)), Text('Force refresh all users', style: TextStyle(fontSize: 10, color: Colors.white38))]),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _db.child('globalConfig').update({'cacheVersion': _cacheVersion + 1});
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('CACHE REFRESH SIGNAL SENT!')));
+                  },
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('REFRESH NOW'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                )
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
           TextField(controller: _wa, decoration: const InputDecoration(labelText: 'WhatsApp Contact Link')),
           TextField(controller: _tg, decoration: const InputDecoration(labelText: 'Telegram Channel Link')),
           TextField(controller: _sh, decoration: const InputDecoration(labelText: 'App Sharing Message')),
           const SizedBox(height: 40),
           SizedBox(width: double.infinity, height: 55, child: ElevatedButton(onPressed: () {
             _db.child('settings').update({'whatsappLink': _wa.text, 'telegramLink': _tg.text, 'shareLink': _sh.text});
-            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'forceUpdate': _forceUpdate});
+            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'releaseNotes': _notes.text, 'forceUpdate': _forceUpdate});
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GLOBAL CONFIG SYNCHRONIZED!')));
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), child: const Text('SAVE ALL CONFIGURATIONS'))),
         ]),

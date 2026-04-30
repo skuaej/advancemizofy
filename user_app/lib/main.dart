@@ -143,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerCtrl = PageController();
   Timer? _bannerTimer;
   Map<String, List<dynamic>> _categoryCache = {};
+  int _currentCacheVersion = 0;
 
   @override
   void initState() {
@@ -170,11 +171,28 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context, barrierDismissible: false,
             builder: (c) => AlertDialog(
               title: const Text('Update Required'),
-              content: const Text('New version of Mizofy TV is available.'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('New version of Mizofy TV is available.'),
+                  if (config['releaseNotes'] != null) ...[
+                    const SizedBox(height: 12),
+                    const Text('WHAT\'S NEW:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.redAccent)),
+                    Text(config['releaseNotes'], style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                  ],
+                ],
+              ),
               actions: [ElevatedButton(onPressed: () => _open(config['updateUrl']), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('UPDATE NOW'))],
             ),
           );
         }
+      }
+      
+      // Cache Refresh Logic
+      if (config['cacheVersion'] != null && config['cacheVersion'] > _currentCacheVersion) {
+        _currentCacheVersion = config['cacheVersion'];
+        _categoryCache.clear();
       }
     }
   }
