@@ -566,7 +566,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   bool _forceUpdate = false;
   bool _unityTestMode = false;
   final _wa = TextEditingController(); final _tg = TextEditingController(); final _sh = TextEditingController(); final _mq = TextEditingController();
-  final _ver = TextEditingController(); final _upd = TextEditingController(); final _notes = TextEditingController();
+  final _ver = TextEditingController(); final _upd = TextEditingController(); final _notes = TextEditingController(); final _limit = TextEditingController();
   int _cacheVersion = 0;
 
   @override
@@ -586,6 +586,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
         _ver.text = d['version'] ?? '1.0.0';
         _upd.text = d['updateUrl'] ?? '';
         _notes.text = d['releaseNotes'] ?? '';
+        _limit.text = (d['displayLimit'] ?? '50').toString();
         _forceUpdate = d['forceUpdate'] ?? false;
         _unityTestMode = d['unityTestMode'] ?? false;
         _cacheVersion = d['cacheVersion'] ?? 0;
@@ -617,6 +618,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
           TextField(controller: _ver, decoration: const InputDecoration(labelText: 'Latest App Version')),
           TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Direct APK Download Link')),
           TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Release Notes / What\'s New'), maxLines: 2),
+          TextField(controller: _limit, decoration: const InputDecoration(labelText: 'Initial Channels Display Limit (e.g. 50)')),
           SwitchListTile(title: const Text('Enable Mandatory Update'), subtitle: const Text('Blocks user until they update', style: TextStyle(fontSize: 10)), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
           SwitchListTile(title: const Text('Unity Ads Test Mode'), subtitle: const Text('Use for testing only!', style: TextStyle(fontSize: 10)), value: _unityTestMode, activeColor: Colors.blue, onChanged: (v) => setState(() => _unityTestMode = v)),
           const Divider(height: 40, color: Colors.white10),
@@ -646,7 +648,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
           const SizedBox(height: 40),
           SizedBox(width: double.infinity, height: 55, child: ElevatedButton(onPressed: () {
             _db.child('settings').update({'whatsappLink': _wa.text, 'telegramLink': _tg.text, 'shareLink': _sh.text});
-            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'releaseNotes': _notes.text, 'forceUpdate': _forceUpdate, 'unityTestMode': _unityTestMode});
+            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'releaseNotes': _notes.text, 'forceUpdate': _forceUpdate, 'unityTestMode': _unityTestMode, 'displayLimit': int.tryParse(_limit.text) ?? 50});
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GLOBAL CONFIG SYNCHRONIZED!')));
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), child: const Text('SAVE ALL CONFIGURATIONS'))),
         ]),
@@ -802,7 +804,7 @@ class _AdManagerState extends State<AdManager> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
           ElevatedButton(onPressed: () {
-            final data = {'title': title.text, 'imageUrl': image.text, 'url': url.text};
+            final data = {'title': title.text, 'imageUrl': image.text, 'url': url.text, 'order': ad?['order'] ?? _ads.length};
             if (ad == null) {
               _db.child('ads').push().set(data);
             } else {
@@ -819,23 +821,32 @@ class _AdManagerState extends State<AdManager> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ADVERTISEMENT MANAGER'), actions: [IconButton(icon: const Icon(Icons.add_business_rounded), onPressed: () => _addEditAd())]),
-      body: ListView.builder(
-        itemCount: _ads.length,
-        itemBuilder: (c, i) => Card(
+      body: ReorderableListView(
+        onReorder: (oldI, newI) {
+          setState(() {
+            final item = _ads.removeAt(oldI);
+            _ads.insert(newI, item);
+            for (int i = 0; i < _ads.length; i++) {
+              _db.child('ads/${_ads[i]['id']}').update({'order': i});
+            }
+          });
+        },
+        children: _ads.map((ad) => Card(
+          key: ValueKey(ad['id']),
           margin: const EdgeInsets.all(8),
           child: ListTile(
-            leading: Image.network(_ads[i]['imageUrl'] ?? '', width: 60, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.campaign)),
-            title: Text(_ads[i]['title'] ?? ''),
-            subtitle: Text(_ads[i]['url'] ?? '', maxLines: 1),
+            leading: Image.network(ad['imageUrl'] ?? '', width: 60, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.campaign)),
+            title: Text(ad['title'] ?? ''),
+            subtitle: Text(ad['url'] ?? '', maxLines: 1),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addEditAd(_ads[i])),
-                IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('ads/${_ads[i]['id']}').remove()),
+                IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addEditAd(ad)),
+                IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('ads/${ad['id']}').remove()),
               ],
             ),
           ),
-        ),
+        )).toList(),
       ),
     );
   }

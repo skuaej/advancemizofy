@@ -143,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _banners = [];
   List<dynamic> _highlights = [];
   List<dynamic> _ads = [];
+  bool _showAll = false;
   Map<String, dynamic> _settings = {};
   Map<String, dynamic> _globalConfig = {};
   final PageController _bannerCtrl = PageController();
@@ -438,7 +439,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     final cat = _categories[i];
                     final active = _activeCategoryId == cat['id'];
                     return GestureDetector(
-                      onTap: () => setState(() => _activeCategoryId = cat['id']),
+                      onTap: () {
+                        setState(() {
+                          _activeCategoryId = cat['id'];
+                          _showAll = false;
+                        });
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         margin: const EdgeInsets.only(right: 10, top: 4, bottom: 4), 
@@ -450,22 +456,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 )),
 
-                GridView.builder(
-                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.05),
-                  itemCount: filtered.length,
-                  itemBuilder: (c, i) => GestureDetector(
-                    onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: filtered[i])))),
-                    child: Container(
-                      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.05))), 
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(18)), child: Image.network(filtered[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Center(child: Icon(Icons.tv, size: 30, color: Colors.white10))))),
-                        Padding(padding: const EdgeInsets.all(10), child: Text(filtered[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white70))),
-                      ]),
-                    ),
-                  ),
-                ),
+                Builder(builder: (c) {
+                  final limit = int.tryParse(_globalConfig['displayLimit']?.toString() ?? '50') ?? 50;
+                  final displayList = (_showAll || _isSearching) ? filtered : filtered.take(limit).toList();
+                  
+                  return Column(
+                    children: [
+                      GridView.builder(
+                        shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.05),
+                        itemCount: displayList.length,
+                        itemBuilder: (c, i) => GestureDetector(
+                          onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: displayList[i])))),
+                          child: Container(
+                            decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.05))), 
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Expanded(child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(18)), child: Image.network(displayList[i]['thumbnail'] ?? '', fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Center(child: Icon(Icons.tv, size: 30, color: Colors.white10))))),
+                              Padding(padding: const EdgeInsets.all(10), child: Text(displayList[i]['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white70))),
+                            ]),
+                          ),
+                        ),
+                      ),
+                      if (!_showAll && filtered.length > limit && !_isSearching)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => _showAll = true),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.red),
+                            label: Text('SHOW ALL (${filtered.length} CHANNELS)', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.red.withOpacity(0.3)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          ),
+                        ),
+                    ],
+                  );
+                }),
               ],
             ))),
           ],
