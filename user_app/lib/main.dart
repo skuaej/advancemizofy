@@ -141,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSearching = false;
   final _searchCtrl = TextEditingController();
   List<dynamic> _banners = [];
+  List<dynamic> _highlights = [];
   Map<String, dynamic> _settings = {};
   Map<String, dynamic> _globalConfig = {};
   final PageController _bannerCtrl = PageController();
@@ -285,6 +286,10 @@ class _HomeScreenState extends State<HomeScreen> {
             _categoryCache.forEach((k, v) => v.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0)));
           }
           if (root['banners'] is Map) _banners = (root['banners'] as Map).values.take(5).toList();
+          if (root['highlights'] is Map) {
+            _highlights = (root['highlights'] as Map).entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+            _highlights.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+          }
           if (root['settings'] is Map) _settings = Map<String, dynamic>.from(root['settings'] as Map);
           if (root['globalConfig'] is Map) _globalConfig = Map<String, dynamic>.from(root['globalConfig'] as Map);
         });
@@ -357,6 +362,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 
                 if (_settings['showAds'] != false)
                   Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
+
+                if (_highlights.isNotEmpty && !_isSearching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                          Text('HIGHLIGHTS', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white70, letterSpacing: 1)),
+                          if (_highlights.length > 4) GestureDetector(onTap: () {}, child: const Text('SEE ALL', style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold))),
+                        ]),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: _highlights.take(4).map((h) => Expanded(
+                            child: GestureDetector(
+                              onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(h))))),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                height: 100,
+                                decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10), image: DecorationImage(image: NetworkImage(h['imageUrl'] ?? ''), fit: BoxFit.cover, opacity: 0.6)),
+                                child: Center(child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(h['title'] ?? '', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white, decoration: TextDecoration.underline, decorationColor: Colors.red, decorationThickness: 2)),
+                                )),
+                              ),
+                            ),
+                          )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 if (!_isSearching) SizedBox(height: 42, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
@@ -453,6 +488,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      player.dispose();
+    }
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
       // Force resume in PiP
       Future.delayed(const Duration(milliseconds: 500), () {

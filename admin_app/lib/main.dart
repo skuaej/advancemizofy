@@ -100,6 +100,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _currentIndex = 0;
   final List<Widget> _screens = [
     const ChannelCategoryManager(),
+    const HighlightManager(),
     const BannerManager(),
     const PushNotificationManager(),
     const GlobalSettingsManager(),
@@ -118,6 +119,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         backgroundColor: const Color(0xFF1A1A1A),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.category_rounded), label: 'Content'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_rounded), label: 'Highlights'),
           BottomNavigationBarItem(icon: Icon(Icons.photo_library_rounded), label: 'Banners'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_active_rounded), label: 'Push'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_suggest_rounded), label: 'Settings'),
@@ -646,6 +648,107 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GLOBAL CONFIG SYNCHRONIZED!')));
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), child: const Text('SAVE ALL CONFIGURATIONS'))),
         ]),
+      ),
+    );
+  }
+}
+
+class HighlightManager extends StatefulWidget {
+  const HighlightManager({super.key});
+
+  @override
+  State<HighlightManager> createState() => _HighlightManagerState();
+}
+
+class _HighlightManagerState extends State<HighlightManager> {
+  final _db = FirebaseDatabase.instance.ref();
+  List<Map<String, dynamic>> _highlights = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _db.child('highlights').onValue.listen((event) {
+      if (event.snapshot.value is Map) {
+        final data = event.snapshot.value as Map;
+        setState(() {
+          _highlights = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+          _highlights.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
+        });
+      } else {
+        setState(() => _highlights = []);
+      }
+    });
+  }
+
+  void _addEditHighlight([Map<String, dynamic>? highlight]) {
+    final title = TextEditingController(text: highlight?['title'] ?? '');
+    final image = TextEditingController(text: highlight?['imageUrl'] ?? '');
+    final url = TextEditingController(text: highlight?['url'] ?? '');
+    bool isEmbed = highlight?['isEmbed'] ?? false;
+
+    showDialog(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setS) => AlertDialog(
+          title: Text(highlight == null ? 'ADD HIGHLIGHT' : 'EDIT HIGHLIGHT'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
+                TextField(controller: image, decoration: const InputDecoration(labelText: 'Image URL')),
+                TextField(controller: url, decoration: const InputDecoration(labelText: 'Stream/Embed Link')),
+                SwitchListTile(title: const Text('Is Embed?'), value: isEmbed, onChanged: (v) => setS(() => isEmbed = v)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+            ElevatedButton(onPressed: () {
+              final data = {'title': title.text, 'imageUrl': image.text, 'url': url.text, 'isEmbed': isEmbed, 'order': highlight?['order'] ?? _highlights.length};
+              if (highlight == null) {
+                _db.child('highlights').push().set(data);
+              } else {
+                _db.child('highlights/${highlight['id']}').update(data);
+              }
+              Navigator.pop(context);
+            }, child: const Text('SAVE')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('HIGHLIGHTS MANAGER'), actions: [IconButton(icon: const Icon(Icons.add), onPressed: () => _addEditHighlight())]),
+      body: ReorderableListView(
+        onReorder: (oldI, newI) {
+          setState(() {
+            final item = _highlights.removeAt(oldI);
+            _highlights.insert(newI, item);
+            for (int i = 0; i < _highlights.length; i++) {
+              _db.child('highlights/${_highlights[i]['id']}').update({'order': i});
+            }
+          });
+        },
+        children: _highlights.map((h) => Card(
+          key: ValueKey(h['id']),
+          margin: const EdgeInsets.all(8),
+          child: ListTile(
+            leading: Image.network(h['imageUrl'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image)),
+            title: Text(h['title'] ?? ''),
+            subtitle: Text(h['url'] ?? '', maxLines: 1),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addEditHighlight(h)),
+                IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('highlights/${h['id']}').remove()),
+              ],
+            ),
+          ),
+        )).toList(),
       ),
     );
   }
