@@ -198,25 +198,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initUnityAds() {
+    bool testMode = _globalConfig['unityTestMode'] ?? false;
     UnityAds.init(
       gameId: Platform.isAndroid ? '6099899' : '6099898', 
-      testMode: false,
+      testMode: testMode,
       onComplete: () {
-        print('Unity Ads Initialization Complete');
+        print('Unity Ads Initialization Complete (TestMode: $testMode)');
+        UnityAds.setPrivacyConsent('gdpr', true);
+        UnityAds.setPrivacyConsent('ccpa', true);
         _loadAds();
       },
-      onFailed: (error, message) => print('Unity Ads Initialization Failed: [$error] $message'),
+      onFailed: (error, message) {
+        print('Unity Ads Initialization Failed: [$error] $message');
+        Future.delayed(const Duration(seconds: 30), () => _initUnityAds());
+      },
     );
   }
 
   void _loadAds() {
+    final iid = Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS';
+    final rid = Platform.isAndroid ? 'Rewarded_Android' : 'Rewarded_iOS';
+    
     UnityAds.load(
-      placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
+      placementId: iid,
       onComplete: (p) => print('Interstitial Loaded: $p'),
-      onFailed: (p, e, m) => print('Interstitial Load Failed: $m'),
+      onFailed: (p, e, m) {
+        print('Interstitial Load Failed: $m. Retrying in 30s...');
+        Future.delayed(const Duration(seconds: 30), () => _loadAds());
+      },
     );
     UnityAds.load(
-      placementId: Platform.isAndroid ? 'Rewarded_Android' : 'Rewarded_iOS',
+      placementId: rid,
       onComplete: (p) => print('Rewarded Loaded: $p'),
       onFailed: (p, e, m) => print('Rewarded Load Failed: $m'),
     );

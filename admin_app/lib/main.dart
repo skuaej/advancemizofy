@@ -477,6 +477,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
   final _db = FirebaseDatabase.instance.ref();
   int _userCount = 0;
   bool _forceUpdate = false;
+  bool _unityTestMode = false;
   final _wa = TextEditingController(); final _tg = TextEditingController(); final _sh = TextEditingController(); final _mq = TextEditingController();
   final _ver = TextEditingController(); final _upd = TextEditingController(); final _notes = TextEditingController();
   int _cacheVersion = 0;
@@ -499,6 +500,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
         _upd.text = d['updateUrl'] ?? '';
         _notes.text = d['releaseNotes'] ?? '';
         _forceUpdate = d['forceUpdate'] ?? false;
+        _unityTestMode = d['unityTestMode'] ?? false;
         _cacheVersion = d['cacheVersion'] ?? 0;
         setState(() {});
       }
@@ -529,6 +531,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
           TextField(controller: _upd, decoration: const InputDecoration(labelText: 'Direct APK Download Link')),
           TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Release Notes / What\'s New'), maxLines: 2),
           SwitchListTile(title: const Text('Enable Mandatory Update'), subtitle: const Text('Blocks user until they update', style: TextStyle(fontSize: 10)), value: _forceUpdate, activeColor: Colors.red, onChanged: (v) => setState(() => _forceUpdate = v)),
+          SwitchListTile(title: const Text('Unity Ads Test Mode'), subtitle: const Text('Use for testing only!', style: TextStyle(fontSize: 10)), value: _unityTestMode, activeColor: Colors.blue, onChanged: (v) => setState(() => _unityTestMode = v)),
           const Divider(height: 40, color: Colors.white10),
           Container(
             padding: const EdgeInsets.all(16),
@@ -556,7 +559,7 @@ class _GlobalSettingsManagerState extends State<GlobalSettingsManager> {
           const SizedBox(height: 40),
           SizedBox(width: double.infinity, height: 55, child: ElevatedButton(onPressed: () {
             _db.child('settings').update({'whatsappLink': _wa.text, 'telegramLink': _tg.text, 'shareLink': _sh.text});
-            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'releaseNotes': _notes.text, 'forceUpdate': _forceUpdate});
+            _db.child('globalConfig').update({'alertMsg': _mq.text, 'version': _ver.text, 'updateUrl': _upd.text, 'releaseNotes': _notes.text, 'forceUpdate': _forceUpdate, 'unityTestMode': _unityTestMode});
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GLOBAL CONFIG SYNCHRONIZED!')));
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))), child: const Text('SAVE ALL CONFIGURATIONS'))),
         ]),
