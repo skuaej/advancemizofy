@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:marquee/marquee.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -352,19 +353,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
   static const platform = MethodChannel('mizofy.user/security');
   bool _showControls = true;
   Timer? _hideTimer;
+  late final WebViewController _webCtrl;
 
   @override
   void initState() {
     super.initState();
-    // Advanced VLC Headers & Logic
-    player.open(Media(
-      widget.channel['url'] ?? '', 
-      httpHeaders: {
-        'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16',
-        'Referer': '',
-        'Origin': '',
-      }
-    ));
+    if (widget.channel['isEmbed'] == true) {
+      _webCtrl = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.black)
+        ..loadRequest(Uri.parse(widget.channel['url'] ?? ''));
+    } else {
+      player.open(Media(
+        widget.channel['url'] ?? '', 
+        httpHeaders: {
+          'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16',
+          'Referer': '',
+          'Origin': '',
+        }
+      ));
+    }
     _startHideTimer();
   }
 
@@ -380,80 +388,94 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PIPView(builder: (c, isF) => Scaffold(
-      backgroundColor: Colors.black, 
-      body: GestureDetector(
-        onTap: () {
-          setState(() => _showControls = !_showControls);
-          if (_showControls) _startHideTimer();
-        },
-        child: Stack(
-          children: [
-            Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
-            
-            // VLC Style Overlay
-            if (_showControls && !isF) ...[
-              Positioned.fill(child: Container(color: Colors.black38)),
-              
-              // Centered PiP Button (Mid Player)
+    return PIPView(builder: (c, isF) {
+      // Logic to show ONLY the video player area in PiP
+      if (isF) {
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: widget.channel['isEmbed'] == true 
+              ? WebViewWidget(controller: _webCtrl)
+              : AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))
+          ),
+        );
+      }
+
+      return Scaffold(
+        backgroundColor: Colors.black, 
+        body: GestureDetector(
+          onTap: () {
+            setState(() => _showControls = !_showControls);
+            if (_showControls) _startHideTimer();
+          },
+          child: Stack(
+            children: [
               Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(iconSize: 48, icon: const Icon(Icons.picture_in_picture_alt, color: Colors.white), onPressed: () => platform.invokeMethod('enterPipMode')),
-                    const SizedBox(width: 40),
-                    StreamBuilder(
-                      stream: player.stream.playing,
-                      builder: (c, snap) => IconButton(
-                        iconSize: 64,
-                        icon: Icon(snap.data == true ? Icons.pause_circle_filled : Icons.play_circle_filled, color: Colors.white),
-                        onPressed: () => player.playOrPause(),
-                      ),
-                    ),
-                  ],
-                ),
+                child: widget.channel['isEmbed'] == true 
+                  ? WebViewWidget(controller: _webCtrl)
+                  : AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))
               ),
-
-              // Top Bar
-              Positioned(top: 40, left: 10, right: 10, child: Row(
-                children: [
-                  IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(widget.channel['title'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
-                ],
-              )),
-
-              // Bottom Progress (VLC Style)
-              Positioned(bottom: 20, left: 20, right: 20, child: StreamBuilder(
-                stream: player.stream.position,
-                builder: (c, snap) {
-                  final pos = snap.data ?? Duration.zero;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
+              
+              if (_showControls) ...[
+                Positioned.fill(child: Container(color: Colors.black38)),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Slider(
-                        value: pos.inSeconds.toDouble(),
-                        max: (player.state.duration.inSeconds > 0) ? player.state.duration.inSeconds.toDouble() : 1.0,
-                        activeColor: Colors.red,
-                        inactiveColor: Colors.white24,
-                        onChanged: (v) => player.seek(Duration(seconds: v.toInt())),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_formatDur(pos), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                          Text(_formatDur(player.state.duration), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        ],
-                      ),
+                      IconButton(iconSize: 48, icon: const Icon(Icons.picture_in_picture_alt, color: Colors.white), onPressed: () => platform.invokeMethod('enterPipMode')),
+                      if (widget.channel['isEmbed'] != true) ...[
+                        const SizedBox(width: 40),
+                        StreamBuilder(
+                          stream: player.stream.playing,
+                          builder: (c, snap) => IconButton(
+                            iconSize: 64,
+                            icon: Icon(snap.data == true ? Icons.pause_circle_filled : Icons.play_circle_filled, color: Colors.white),
+                            onPressed: () => player.playOrPause(),
+                          ),
+                        ),
+                      ],
                     ],
-                  );
-                },
-              )),
+                  ),
+                ),
+                Positioned(top: 40, left: 10, right: 10, child: Row(
+                  children: [
+                    IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(widget.channel['title'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
+                  ],
+                )),
+                if (widget.channel['isEmbed'] != true)
+                  Positioned(bottom: 20, left: 20, right: 20, child: StreamBuilder(
+                    stream: player.stream.position,
+                    builder: (c, snap) {
+                      final pos = snap.data ?? Duration.zero;
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Slider(
+                            value: pos.inSeconds.toDouble(),
+                            max: (player.state.duration.inSeconds > 0) ? player.state.duration.inSeconds.toDouble() : 1.0,
+                            activeColor: Colors.red,
+                            inactiveColor: Colors.white24,
+                            onChanged: (v) => player.seek(Duration(seconds: v.toInt())),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(_formatDur(pos), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                              Text(_formatDur(player.state.duration), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  )),
+              ],
             ],
-          ],
-        ),
-      )
-    ));
+          ),
+        )
+      );
+    });
   }
 
   String _formatDur(Duration d) {

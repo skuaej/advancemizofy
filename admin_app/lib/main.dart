@@ -298,6 +298,7 @@ class _ChannelListManagerState extends State<ChannelListManager> {
               child: ListTile(
                 leading: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(ch['thumbnail'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.tv))),
                 title: Text(ch['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text(ch['isEmbed'] == true ? 'Embed Mode' : 'Stream Mode', style: const TextStyle(fontSize: 10, color: Colors.white38)),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   IconButton(icon: const Icon(Icons.edit_note_rounded, size: 24, color: Colors.blue), onPressed: () => showDialog(context: context, builder: (context) => ChannelEditDialog(channel: ch, categoryName: widget.categoryName))),
                   IconButton(icon: const Icon(Icons.delete_sweep_rounded, size: 24, color: Colors.red), onPressed: () => _db.child('channels/${ch['id']}').remove()),
@@ -325,6 +326,7 @@ class _ChannelEditDialogState extends State<ChannelEditDialog> {
   final _title = TextEditingController();
   final _url = TextEditingController();
   final _thumb = TextEditingController();
+  bool _isEmbed = false;
 
   @override
   void initState() {
@@ -333,6 +335,7 @@ class _ChannelEditDialogState extends State<ChannelEditDialog> {
       _title.text = widget.channel!['title'] ?? '';
       _url.text = widget.channel!['url'] ?? '';
       _thumb.text = widget.channel!['thumbnail'] ?? '';
+      _isEmbed = widget.channel!['isEmbed'] ?? false;
     }
   }
 
@@ -343,11 +346,19 @@ class _ChannelEditDialogState extends State<ChannelEditDialog> {
       title: Text(widget.channel != null ? 'EDIT CHANNEL' : 'NEW CHANNEL', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: _title, decoration: const InputDecoration(labelText: 'Channel Title', labelStyle: TextStyle(fontSize: 12))),
-        TextField(controller: _url, decoration: const InputDecoration(labelText: 'Stream URL (m3u8/mpd)', labelStyle: TextStyle(fontSize: 12))),
+        TextField(controller: _url, decoration: InputDecoration(labelText: _isEmbed ? 'Embed URL (Iframe/Web)' : 'Stream URL (m3u8/mpd)', labelStyle: const TextStyle(fontSize: 12))),
         TextField(controller: _thumb, decoration: const InputDecoration(labelText: 'Thumbnail URL', labelStyle: TextStyle(fontSize: 12))),
+        const SizedBox(height: 10),
+        SwitchListTile(
+          title: const Text('Embed Mode', style: TextStyle(fontSize: 12)),
+          subtitle: const Text('Enable for Streamlabs/Web links', style: TextStyle(fontSize: 10)),
+          value: _isEmbed,
+          activeColor: Colors.red,
+          onChanged: (v) => setState(() => _isEmbed = v),
+        ),
       ])),
       actions: [ElevatedButton(onPressed: () {
-        final data = {'title': _title.text, 'url': _url.text, 'thumbnail': _thumb.text, 'categoryId': widget.categoryId ?? widget.channel!['categoryId'], 'category': widget.categoryName};
+        final data = {'title': _title.text, 'url': _url.text, 'thumbnail': _thumb.text, 'categoryId': widget.categoryId ?? widget.channel!['categoryId'], 'category': widget.categoryName, 'isEmbed': _isEmbed};
         if (widget.channel != null) {
           FirebaseDatabase.instance.ref().child('channels/${widget.channel!['id']}').update(data);
         } else {

@@ -50,6 +50,7 @@ dependencies:
   marquee: ^2.2.3
   firebase_messaging: ^15.2.10
   flutter_local_notifications: ^17.0.0
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:
