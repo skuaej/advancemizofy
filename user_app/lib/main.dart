@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _initUnityAds() {
     UnityAds.init(
-      gameId: Platform.isAndroid ? '5611533' : '5611532', 
+      gameId: Platform.isAndroid ? '6099899' : '6099898', 
       testMode: false,
       onComplete: () => print('Unity Ads Initialization Complete'),
       onFailed: (error, message) => print('Unity Ads Initialization Failed: [$error] $message'),
@@ -418,10 +418,12 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      // In PiP mode, the app might be reported as inactive/paused, but we want to keep playing
-      if (player.state.playing == false) {
-        player.play();
-      }
+      // Force resume in PiP
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && player.state.playing == false) {
+          player.play();
+        }
+      });
     }
   }
 
@@ -448,10 +450,24 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       if (isF) {
         return Scaffold(
           backgroundColor: Colors.black,
-          body: Center(
-            child: widget.channel['isEmbed'] == true 
-              ? WebViewWidget(controller: _webCtrl)
-              : AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))
+          body: Stack(
+            children: [
+              Center(
+                child: widget.channel['isEmbed'] == true 
+                  ? WebViewWidget(controller: _webCtrl)
+                  : AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))
+              ),
+              StreamBuilder(
+                stream: player.stream.playing,
+                builder: (c, snap) => snap.data == false ? Center(
+                  child: IconButton(
+                    iconSize: 50,
+                    icon: const Icon(Icons.play_circle_filled, color: Colors.white70),
+                    onPressed: () => player.play(),
+                  ),
+                ) : const SizedBox.shrink(),
+              ),
+            ],
           ),
         );
       }
