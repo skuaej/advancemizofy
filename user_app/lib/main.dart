@@ -201,8 +201,24 @@ class _HomeScreenState extends State<HomeScreen> {
     UnityAds.init(
       gameId: Platform.isAndroid ? '6099899' : '6099898', 
       testMode: false,
-      onComplete: () => print('Unity Ads Initialization Complete'),
+      onComplete: () {
+        print('Unity Ads Initialization Complete');
+        _loadAds();
+      },
       onFailed: (error, message) => print('Unity Ads Initialization Failed: [$error] $message'),
+    );
+  }
+
+  void _loadAds() {
+    UnityAds.load(
+      placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
+      onComplete: (p) => print('Interstitial Loaded: $p'),
+      onFailed: (p, e, m) => print('Interstitial Load Failed: $m'),
+    );
+    UnityAds.load(
+      placementId: Platform.isAndroid ? 'Rewarded_Android' : 'Rewarded_iOS',
+      onComplete: (p) => print('Rewarded Loaded: $p'),
+      onFailed: (p, e, m) => print('Rewarded Load Failed: $m'),
     );
   }
 
@@ -210,10 +226,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_settings['showAds'] == false) { onComplete(); return; }
     UnityAds.showVideoAd(
       placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
-      onComplete: (p) => onComplete(),
-      onSkipped: (p) => onComplete(),
+      onComplete: (p) { _loadAds(); onComplete(); },
+      onSkipped: (p) { _loadAds(); onComplete(); },
       onFailed: (p, e, m) {
         print('Interstitial Failed: $m');
+        _loadAds();
         onComplete();
       },
     );
@@ -222,9 +239,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showRewardedAd(VoidCallback onReward) {
     UnityAds.showVideoAd(
       placementId: Platform.isAndroid ? 'Rewarded_Android' : 'Rewarded_iOS',
-      onComplete: (p) => onReward(),
-      onSkipped: (p) => print('User skipped rewarded ad'),
-      onFailed: (p, e, m) => print('Rewarded Ad Failed: $m'),
+      onComplete: (p) { _loadAds(); onReward(); },
+      onSkipped: (p) { _loadAds(); print('User skipped rewarded ad'); },
+      onFailed: (p, e, m) { _loadAds(); print('Rewarded Ad Failed: $m'); },
     );
   }
 
