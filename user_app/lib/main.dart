@@ -136,7 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final DatabaseReference _db = FirebaseDatabase.instance.ref();
   List<dynamic> _channels = [];
   List<dynamic> _categories = [];
-  String? _activeCategoryId;
+  String _activeCategoryId = "";
+  String _searchQuery = "";
+  bool _isSearching = false;
+  final _searchCtrl = TextEditingController();
   List<dynamic> _banners = [];
   Map<String, dynamic> _settings = {};
   Map<String, dynamic> _globalConfig = {};
@@ -258,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); super.dispose(); }
+  void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); _searchCtrl.dispose(); super.dispose(); }
 
   void _listen() {
     _db.onValue.listen((event) {
@@ -269,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final catData = root['categories'] as Map;
             _categories = catData.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
             _categories.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
-            if (_activeCategoryId == null && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
+            if (_activeCategoryId.isEmpty && _categories.isNotEmpty) _activeCategoryId = _categories[0]['id'];
           }
           if (root['channels'] is Map) {
             final chData = root['channels'] as Map;
@@ -293,76 +296,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _categoryCache[_activeCategoryId] ?? [];
-
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8), 
-                      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Colors.red, Color(0xFF8B0000)]), borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)]), 
-                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24)
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('MIZOFY', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                        Container(height: 2, width: 40, color: Colors.red),
-                      ],
-                    ),
-                  ],
-                ),
-                IconButton(icon: const Icon(Icons.share_rounded), onPressed: () => _open(_settings['shareLink'])),
-              ]),
-            ),
-            
-            if (_globalConfig['alertMsg'] != null && _globalConfig['alertMsg'].toString().isNotEmpty && _globalConfig['alertMsg'] != "Hi")
-              Container(height: 22, color: Colors.red.withOpacity(0.05), child: Marquee(text: "${_globalConfig['alertMsg']}   •   ", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10), velocity: 30.0)),
-
-            Expanded(child: ListView(
-              cacheExtent: 1000,
-              children: [
-                if (_banners.isNotEmpty)
-                  SizedBox(height: 240, child: PageView.builder(
-                    controller: _bannerCtrl,
-                    itemCount: _banners.length,
-                    itemBuilder: (c, i) => GestureDetector(
-                      onTap: () => _showInterstitial(() => Navigator.push(context, MaterialPageRoute(builder: (c) => PlayerScreen(channel: Map<String, dynamic>.from(_banners[i]))))),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), image: DecorationImage(image: NetworkImage(_banners[i]['imageUrl'] ?? ''), fit: BoxFit.cover), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 5))]),
-                        child: Container(
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Colors.black, Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.center)),
-                          padding: const EdgeInsets.all(24),
-                          alignment: Alignment.bottomLeft,
-                          child: Text(_banners[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 10)])),
-                        ),
-                      ),
-                    ),
-                  )),
-                
-                if (_settings['showAds'] != false)
-                  Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
-
-                SizedBox(height: 42, child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (c, i) {
-                    final cat = _categories[i];
-                    final active = _activeCategoryId == cat['id'];
-                    return GestureDetector(
-                      onTap: () => setState(() => _activeCategoryId = cat['id']),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(right: 10, top: 4, bottom: 4), 
                         padding: const EdgeInsets.symmetric(horizontal: 18), 
                         decoration: BoxDecoration(color: active ? Colors.red : const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12), border: Border.all(color: active ? Colors.redAccent : Colors.white10), boxShadow: active ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 6)] : null), 
                         child: Center(child: Text(cat['name']?.toUpperCase() ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.5, color: active ? Colors.white : Colors.white54))),

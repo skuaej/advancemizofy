@@ -227,7 +227,7 @@ class _ChannelCategoryManagerState extends State<ChannelCategoryManager> {
             ),
           ),
           const Divider(color: Colors.white10),
-          Expanded(child: _selectedCategoryId == null ? const Center(child: Text("SELECT A CATEGORY TO MANAGE CHANNELS")) : ChannelListManager(categoryId: _selectedCategoryId!, categoryName: _categories.firstWhere((c) => c['id'] == _selectedCategoryId)['name'])),
+          Expanded(child: _selectedCategoryId == null ? const Center(child: Text("SELECT A CATEGORY TO MANAGE CHANNELS")) : RefreshIndicator(onRefresh: () async => setState(() {}), child: Scrollbar(child: ChannelListManager(categoryId: _selectedCategoryId!, categoryName: _categories.firstWhere((c) => c['id'] == _selectedCategoryId)['name'])))),
         ],
       ),
     );
