@@ -365,8 +365,8 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
-  late final Player player = Player();
+class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
+  late final Player player = Player(configuration: const PlayerConfiguration(vo: 'mediacodec', title: 'Mizofy TV'));
   late final VideoController ctrl = VideoController(player);
   static const platform = MethodChannel('mizofy.user/security');
   bool _showControls = true;
@@ -391,8 +391,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
       ));
     }
+    player.setVolume(100);
     platform.invokeMethod('setPlayerActive', {"active": true});
     _startHideTimer();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      // In PiP mode, the app might be reported as inactive/paused, but we want to keep playing
+      if (player.state.playing == false) {
+        player.play();
+      }
+    }
   }
 
   void _startHideTimer() {
@@ -404,6 +416,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() { 
+    WidgetsBinding.instance.removeObserver(this);
     platform.invokeMethod('setPlayerActive', {"active": false});
     _hideTimer?.cancel(); 
     player.dispose(); 
