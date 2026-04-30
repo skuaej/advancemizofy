@@ -101,6 +101,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<Widget> _screens = [
     const ChannelCategoryManager(),
     const HighlightManager(),
+    const AdManager(),
     const BannerManager(),
     const PushNotificationManager(),
     const GlobalSettingsManager(),
@@ -120,6 +121,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.category_rounded), label: 'Content'),
           BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_rounded), label: 'Highlights'),
+          BottomNavigationBarItem(icon: Icon(Icons.campaign_rounded), label: 'Ads'),
           BottomNavigationBarItem(icon: Icon(Icons.photo_library_rounded), label: 'Banners'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_active_rounded), label: 'Push'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_suggest_rounded), label: 'Settings'),
@@ -749,6 +751,91 @@ class _HighlightManagerState extends State<HighlightManager> {
             ),
           ),
         )).toList(),
+      ),
+    );
+  }
+}
+
+class AdManager extends StatefulWidget {
+  const AdManager({super.key});
+
+  @override
+  State<AdManager> createState() => _AdManagerState();
+}
+
+class _AdManagerState extends State<AdManager> {
+  final _db = FirebaseDatabase.instance.ref();
+  List<Map<String, dynamic>> _ads = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _db.child('ads').onValue.listen((event) {
+      if (event.snapshot.value is Map) {
+        final data = event.snapshot.value as Map;
+        setState(() {
+          _ads = data.entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+        });
+      } else {
+        setState(() => _ads = []);
+      }
+    });
+  }
+
+  void _addEditAd([Map<String, dynamic>? ad]) {
+    final title = TextEditingController(text: ad?['title'] ?? '');
+    final image = TextEditingController(text: ad?['imageUrl'] ?? '');
+    final url = TextEditingController(text: ad?['url'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(ad == null ? 'ADD ADVERTISEMENT' : 'EDIT ADVERTISEMENT'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'Ad Title')),
+            TextField(controller: image, decoration: const InputDecoration(labelText: 'Ad Image URL')),
+            TextField(controller: url, decoration: const InputDecoration(labelText: 'Click Action URL')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          ElevatedButton(onPressed: () {
+            final data = {'title': title.text, 'imageUrl': image.text, 'url': url.text};
+            if (ad == null) {
+              _db.child('ads').push().set(data);
+            } else {
+              _db.child('ads/${ad['id']}').update(data);
+            }
+            Navigator.pop(context);
+          }, child: const Text('SAVE')),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ADVERTISEMENT MANAGER'), actions: [IconButton(icon: const Icon(Icons.add_business_rounded), onPressed: () => _addEditAd())]),
+      body: ListView.builder(
+        itemCount: _ads.length,
+        itemBuilder: (c, i) => Card(
+          margin: const EdgeInsets.all(8),
+          child: ListTile(
+            leading: Image.network(_ads[i]['imageUrl'] ?? '', width: 60, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.campaign)),
+            title: Text(_ads[i]['title'] ?? ''),
+            subtitle: Text(_ads[i]['url'] ?? '', maxLines: 1),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addEditAd(_ads[i])),
+                IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _db.child('ads/${_ads[i]['id']}').remove()),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

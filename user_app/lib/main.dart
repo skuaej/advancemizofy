@@ -142,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _searchCtrl = TextEditingController();
   List<dynamic> _banners = [];
   List<dynamic> _highlights = [];
+  List<dynamic> _ads = [];
   Map<String, dynamic> _settings = {};
   Map<String, dynamic> _globalConfig = {};
   final PageController _bannerCtrl = PageController();
@@ -290,6 +291,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _highlights = (root['highlights'] as Map).entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
             _highlights.sort((a, b) => (a['order'] ?? 0).compareTo(b['order'] ?? 0));
           }
+          if (root['ads'] is Map) {
+            _ads = (root['ads'] as Map).entries.map((e) => {'id': e.key, ...Map<String, dynamic>.from(e.value)}).toList();
+          }
           if (root['settings'] is Map) _settings = Map<String, dynamic>.from(root['settings'] as Map);
           if (root['globalConfig'] is Map) _globalConfig = Map<String, dynamic>.from(root['globalConfig'] as Map);
         });
@@ -388,6 +392,39 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (_ads.isNotEmpty && !_isSearching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('PROMOTIONS', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white70, letterSpacing: 1)),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _ads.length,
+                            itemBuilder: (c, i) => GestureDetector(
+                              onTap: () => _open(_ads[i]['url']),
+                              child: Container(
+                                width: 280,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: NetworkImage(_ads[i]['imageUrl'] ?? ''), fit: BoxFit.cover), boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 8)]),
+                                child: Container(
+                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), gradient: LinearGradient(colors: [Colors.black.withOpacity(0.8), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)),
+                                  padding: const EdgeInsets.all(12),
+                                  alignment: Alignment.bottomLeft,
+                                  child: Text(_ads[i]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
