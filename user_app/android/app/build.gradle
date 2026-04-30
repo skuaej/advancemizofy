@@ -27,9 +27,9 @@ android {
     defaultConfig {
         applicationId "mizofy.user.app"
         minSdkVersion 21
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode flutter.versionCode
-        versionName flutter.versionName
+        targetSdkVersion 35
+        versionCode 1
+        versionName "1.0.0"
         multiDexEnabled true
     }
 
