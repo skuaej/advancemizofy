@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:reorderables/reorderables.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -273,10 +276,12 @@ class _ChannelListManagerState extends State<ChannelListManager> {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              Expanded(child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'Search in ${widget.categoryName}...', prefixIcon: const Icon(Icons.search, size: 20), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)))),
-              const SizedBox(width: 10),
-              FloatingActionButton.small(onPressed: _addChannel, backgroundColor: Colors.red, child: const Icon(Icons.add, color: Colors.white)),
-            ],
+               Expanded(child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'Search in ${widget.categoryName}...', prefixIcon: const Icon(Icons.search, size: 20), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)))),
+               const SizedBox(width: 10),
+               FloatingActionButton.small(heroTag: 'm3u', onPressed: _showImportDialog, backgroundColor: Colors.blue, child: const Icon(Icons.upload_file, color: Colors.white)),
+               const SizedBox(width: 8),
+               FloatingActionButton.small(heroTag: 'add', onPressed: _addChannel, backgroundColor: Colors.red, child: const Icon(Icons.add, color: Colors.white)),
+             ],
           ),
         ),
         Expanded(
@@ -309,6 +314,84 @@ class _ChannelListManagerState extends State<ChannelListManager> {
         ),
       ],
     );
+  }
+
+  void _showImportDialog() {
+    final urlCtrl = TextEditingController();
+    bool loading = false;
+
+    showDialog(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setS) => AlertDialog(
+          title: const Text('Bulk M3U Import'),
+          content: loading ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())) : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: urlCtrl, decoration: const InputDecoration(hintText: 'M3U URL (http://...)')),
+              const SizedBox(height: 16),
+              const Text('OR', style: TextStyle(fontSize: 10, color: Colors.white38)),
+              const SizedBox(height: 16),
+              SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () async {
+                FilePickerResult? res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['m3u', 'm3u8']);
+                if (res != null) {
+                  setS(() => loading = true);
+                  final content = utf8.decode(res.files.first.bytes ?? await File(res.files.first.path!).readAsBytes());
+                  await _parseAndSaveM3U(content);
+                  if (mounted) Navigator.pop(context);
+                }
+              }, icon: const Icon(Icons.file_open), label: const Text('PICK M3U FILE'))),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+            if (!loading) ElevatedButton(onPressed: () async {
+              setS(() => loading = true);
+              try {
+                final r = await http.get(Uri.parse(urlCtrl.text));
+                await _parseAndSaveM3U(r.body);
+                if (mounted) Navigator.pop(context);
+              } catch (e) {
+                setS(() => loading = false);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            }, child: const Text('IMPORT URL')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _parseAndSaveM3U(String content) async {
+    final lines = content.split('\n');
+    final db = FirebaseDatabase.instance.ref().child('channels');
+    int count = 0;
+    
+    String? currentName;
+    String? currentLogo;
+
+    for (var line in lines) {
+      line = line.trim();
+      if (line.startsWith('#EXTINF:')) {
+        final logoMatch = RegExp(r'tvg-logo="([^"]+)"').firstMatch(line);
+        currentLogo = logoMatch?.group(1);
+        final nameParts = line.split(',');
+        currentName = nameParts.last.trim();
+      } else if (line.startsWith('http') && currentName != null) {
+        await db.push().set({
+          'categoryId': widget.categoryId,
+          'title': currentName,
+          'url': line,
+          'thumbnail': currentLogo ?? '',
+          'order': 999,
+          'isEmbed': false,
+        });
+        count++;
+        currentName = null;
+        currentLogo = null;
+      }
+    }
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully imported $count channels!')));
   }
 }
 
