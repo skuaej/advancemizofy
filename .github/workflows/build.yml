@@ -26,6 +26,7 @@ jobs:
       run: |
         cd user_app
         flutter pub get
+        flutter pub run flutter_launcher_icons
         flutter build apk --release --no-tree-shake-icons --split-per-abi
     - name: Upload User APKs
       uses: actions/upload-artifact@v4
@@ -52,6 +53,7 @@ jobs:
       run: |
         cd admin_app
         flutter pub get
+        flutter pub run flutter_launcher_icons
         flutter build apk --release --no-tree-shake-icons
     - name: Upload Admin APKs
       uses: actions/upload-artifact@v4
