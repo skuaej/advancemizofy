@@ -1,4 +1,4 @@
-name: Build Mizofy Apps
+name: Mizofy Apps
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.0'
+        flutter-version: '3.24.5'
         channel: 'stable'
     - name: Build User App
       run: |
@@ -46,7 +46,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.27.1'
+        flutter-version: '3.24.5'
         channel: 'stable'
     - name: Build Admin App
       run: |
