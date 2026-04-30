@@ -204,8 +204,8 @@ class _HomeScreenState extends State<HomeScreen> {
       testMode: testMode,
       onComplete: () {
         print('Unity Ads Initialization Complete (TestMode: $testMode)');
-        UnityAds.setPrivacyConsent('gdpr', true);
-        UnityAds.setPrivacyConsent('ccpa', true);
+        UnityAds.setPrivacyConsent(PrivacyConsentType.gdpr, true);
+        UnityAds.setPrivacyConsent(PrivacyConsentType.ccpa, true);
         _loadAds();
       },
       onFailed: (error, message) {
