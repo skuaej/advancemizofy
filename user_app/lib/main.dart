@@ -373,6 +373,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
       ));
     }
+    platform.invokeMethod('setPlayerActive', {"active": true});
     _startHideTimer();
   }
 
@@ -384,7 +385,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   @override
-  void dispose() { _hideTimer?.cancel(); player.dispose(); super.dispose(); }
+  void dispose() { 
+    platform.invokeMethod('setPlayerActive', {"active": false});
+    _hideTimer?.cancel(); 
+    player.dispose(); 
+    super.dispose(); 
+  }
 
   @override
   Widget build(BuildContext context) {
