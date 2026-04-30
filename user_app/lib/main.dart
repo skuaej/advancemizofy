@@ -195,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() { _bannerTimer?.cancel(); _bannerCtrl.dispose(); super.dispose(); }
 
   void _listen() {
-    // Optimized: Fetch all once then listen for changes
     _db.onValue.listen((event) {
       if (event.snapshot.value is Map && mounted) {
         final root = event.snapshot.value as Map;
@@ -286,7 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_settings['showAds'] != false)
                   Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: UnityBannerAd(placementId: Platform.isAndroid ? 'Banner_Android' : 'Banner_iOS'))),
 
-                // Lower Height Categories
                 SizedBox(height: 42, child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _categories.length,
@@ -307,7 +305,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 )),
 
-                // Ultra-Fast Grid
                 GridView.builder(
                   shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
@@ -353,27 +350,114 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late final Player player = Player();
   late final VideoController ctrl = VideoController(player);
   static const platform = MethodChannel('mizofy.user/security');
+  bool _showControls = true;
+  Timer? _hideTimer;
 
   @override
   void initState() {
     super.initState();
-    player.open(Media(widget.channel['url'] ?? '', httpHeaders: {'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16'}));
+    // Advanced VLC Headers & Logic
+    player.open(Media(
+      widget.channel['url'] ?? '', 
+      httpHeaders: {
+        'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16',
+        'Referer': '',
+        'Origin': '',
+      }
+    ));
+    _startHideTimer();
+  }
+
+  void _startHideTimer() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _showControls = false);
+    });
   }
 
   @override
-  void dispose() { player.dispose(); super.dispose(); }
+  void dispose() { _hideTimer?.cancel(); player.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return PIPView(builder: (c, isF) => Scaffold(
       backgroundColor: Colors.black, 
-      body: Stack(
-        children: [
-          Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
-          if (!isF) Positioned(top: 40, left: 10, child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context))),
-          if (!isF) Positioned(bottom: 20, right: 20, child: FloatingActionButton(mini: true, backgroundColor: Colors.red, onPressed: () => platform.invokeMethod('enterPipMode'), child: const Icon(Icons.picture_in_picture_alt))),
-        ],
+      body: GestureDetector(
+        onTap: () {
+          setState(() => _showControls = !_showControls);
+          if (_showControls) _startHideTimer();
+        },
+        child: Stack(
+          children: [
+            Center(child: AspectRatio(aspectRatio: 16/9, child: Video(controller: ctrl))),
+            
+            // VLC Style Overlay
+            if (_showControls && !isF) ...[
+              Positioned.fill(child: Container(color: Colors.black38)),
+              
+              // Centered PiP Button (Mid Player)
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(iconSize: 48, icon: const Icon(Icons.picture_in_picture_alt, color: Colors.white), onPressed: () => platform.invokeMethod('enterPipMode')),
+                    const SizedBox(width: 40),
+                    StreamBuilder(
+                      stream: player.stream.playing,
+                      builder: (c, snap) => IconButton(
+                        iconSize: 64,
+                        icon: Icon(snap.data == true ? Icons.pause_circle_filled : Icons.play_circle_filled, color: Colors.white),
+                        onPressed: () => player.playOrPause(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Top Bar
+              Positioned(top: 40, left: 10, right: 10, child: Row(
+                children: [
+                  IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(widget.channel['title'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
+                ],
+              )),
+
+              // Bottom Progress (VLC Style)
+              Positioned(bottom: 20, left: 20, right: 20, child: StreamBuilder(
+                stream: player.stream.position,
+                builder: (c, snap) {
+                  final pos = snap.data ?? Duration.zero;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Slider(
+                        value: pos.inSeconds.toDouble(),
+                        max: (player.state.duration.inSeconds > 0) ? player.state.duration.inSeconds.toDouble() : 1.0,
+                        activeColor: Colors.red,
+                        inactiveColor: Colors.white24,
+                        onChanged: (v) => player.seek(Duration(seconds: v.toInt())),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(_formatDur(pos), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          Text(_formatDur(player.state.duration), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              )),
+            ],
+          ],
+        ),
       )
     ));
+  }
+
+  String _formatDur(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    return "${twoDigits(d.inHours)}:${twoDigits(d.inMinutes.remainder(60))}:${twoDigits(d.inSeconds.remainder(60))}";
   }
 }
