@@ -198,15 +198,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initUnityAds() {
-    UnityAds.init(gameId: Platform.isAndroid ? '5611533' : '5611532', testMode: false);
+    UnityAds.init(
+      gameId: Platform.isAndroid ? '5611533' : '5611532', 
+      testMode: false,
+      onComplete: () => print('Unity Ads Initialization Complete'),
+      onFailed: (error, message) => print('Unity Ads Initialization Failed: [$error] $message'),
+    );
   }
 
   void _showInterstitial(VoidCallback onComplete) {
+    if (_settings['showAds'] == false) { onComplete(); return; }
     UnityAds.showVideoAd(
       placementId: Platform.isAndroid ? 'Interstitial_Android' : 'Interstitial_iOS',
       onComplete: (p) => onComplete(),
       onSkipped: (p) => onComplete(),
-      onFailed: (p, e, m) => onComplete(),
+      onFailed: (p, e, m) {
+        print('Interstitial Failed: $m');
+        onComplete();
+      },
+    );
+  }
+
+  void _showRewardedAd(VoidCallback onReward) {
+    UnityAds.showVideoAd(
+      placementId: Platform.isAndroid ? 'Rewarded_Android' : 'Rewarded_iOS',
+      onComplete: (p) => onReward(),
+      onSkipped: (p) => print('User skipped rewarded ad'),
+      onFailed: (p, e, m) => print('Rewarded Ad Failed: $m'),
     );
   }
 
