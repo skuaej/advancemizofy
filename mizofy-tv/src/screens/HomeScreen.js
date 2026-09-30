@@ -43,8 +43,29 @@ export default function HomeScreen() {
       setDownloading(true);
       setDownloadProgress(0);
 
+      let directUrl = link.trim();
+
+      // Auto-upgrade http:// to https:// to prevent Android cross-protocol redirect blocking
+      if (directUrl.startsWith('http://')) {
+        directUrl = directUrl.replace('http://', 'https://');
+      }
+
+      // Check for redirects to capture the final direct download destination
+      try {
+        const resCheck = await fetch(directUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        if (resCheck && resCheck.url) {
+          directUrl = resCheck.url;
+        }
+      } catch (e) {
+        console.log('Direct URL check:', e);
+      }
+
       // 1. Handle Mediafire links by resolving the direct binary download URL
-      let directUrl = link;
       if (link.includes('mediafire.com')) {
         try {
           const res = await fetch(link, {
@@ -191,13 +212,8 @@ export default function HomeScreen() {
       let isFirstLoadNotif = true;
       const unsubscribeNotif = onValue(notifRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-           if (!isFirstLoadNotif) {
-             Alert.alert(data.title || "Notice", data.message);
-           } 
-           else if (Date.now() - data.timestamp < 12 * 60 * 60 * 1000) {
-             Alert.alert(data.title || "Notice", data.message);
-           }
+        if (data && !isFirstLoadNotif) {
+          Alert.alert(data.title || "Notice", data.message);
         }
         isFirstLoadNotif = false;
       });
