@@ -24,6 +24,7 @@
     "expo-screen-capture": "~8.0.9",
     "expo-screen-orientation": "~9.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-file-system": "~18.0.10",
     "firebase": "^12.12.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",

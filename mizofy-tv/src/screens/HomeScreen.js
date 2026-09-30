@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Share, ScrollView, ActivityIndicator, Dimensions, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Share, ScrollView, ActivityIndicator, Dimensions, TextInput, Alert, Modal } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import UnityAdBanner from '../components/UnityAdBanner';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,8 @@ import * as Linking from 'expo-linking';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
+import * as FileSystem from 'expo-file-system';
+import * as IntentLauncher from 'expo-intent-launcher';
 
 const { width } = Dimensions.get('window');
 
@@ -26,7 +28,97 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [securityViolation, setSecurityViolation] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const carouselRef = useRef(null);
+
+  const downloadAndInstallApk = async () => {
+    const link = globalConfig.forceUpdateLink;
+    if (!link) {
+      Alert.alert('Error', 'No update link set by admin.');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      setDownloadProgress(0);
+
+      // Handle Mediafire links by resolving the real direct download link
+      let directUrl = link;
+      if (link.includes('mediafire.com')) {
+        try {
+          const res = await fetch(link, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+            }
+          });
+          const text = await res.text();
+          const match = text.match(/id=["']downloadButton["'][^>]*href=["']([^"']+)["']/i) ||
+                        text.match(/aria-label=["']Download file["'][^>]*href=["']([^"']+)["']/i) ||
+                        text.match(/href=["'](https?:\/\/download[^"']+)["']/i);
+          if (match && match[1]) {
+            directUrl = match[1];
+          }
+        } catch (scrapeErr) {
+          console.log('Mediafire direct link resolution error:', scrapeErr);
+        }
+      }
+
+      const fileUri = FileSystem.cacheDirectory + 'mizofy_update.apk';
+
+      // Delete old APK if exists
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      }
+
+      // Download directly inside the app with real progress
+      const downloadResumable = FileSystem.createDownloadResumable(
+        directUrl,
+        fileUri,
+        {},
+        (progress) => {
+          if (progress.totalBytesExpectedToWrite > 0) {
+            const pct = progress.totalBytesWritten / progress.totalBytesExpectedToWrite;
+            setDownloadProgress(Math.min(1, Math.max(0, pct)));
+          }
+        }
+      );
+
+      const downloadResult = await downloadResumable.downloadAsync();
+      const localUri = downloadResult ? downloadResult.uri : fileUri;
+
+      setDownloading(false);
+
+      // Convert file:// to content:// for Android PackageInstaller
+      let contentUri = localUri;
+      try {
+        contentUri = await FileSystem.getContentUriAsync(localUri);
+      } catch (uriErr) {
+        console.log('getContentUriAsync fallback:', uriErr);
+      }
+
+      // Launch native Android installer directly
+      await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+        data: contentUri,
+        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        type: 'application/vnd.android.package-archive',
+      });
+
+    } catch (e) {
+      setDownloading(false);
+      setDownloadProgress(0);
+      console.error('APK Download & Install Error:', e);
+      Alert.alert(
+        'Update Error',
+        'Could not complete the automatic download. Please ensure the link is active.',
+        [
+          { text: 'Retry', onPress: downloadAndInstallApk },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    }
+  };
 
   useEffect(() => {
     if (!database) {
@@ -192,6 +284,8 @@ export default function HomeScreen() {
 
   // FORCE UPDATE BLOCKER
   if (globalConfig.requiredVersion > CURRENT_APP_VERSION) {
+    const progressPercent = Math.round(downloadProgress * 100);
+
     return (
       <View style={[styles.container, {justifyContent: 'center', alignItems: 'center', padding: 25, backgroundColor: '#0a0a0a'}]}>
         <View style={{width: 100, height: 100, borderRadius: 50, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ff2d2d', marginBottom: 20}}>
@@ -200,30 +294,61 @@ export default function HomeScreen() {
         
         <Text style={{color: '#fff', fontSize: 26, fontWeight: 'bold', textAlign: 'center'}}>Update Required</Text>
         <Text style={{color: '#ff2d2d', fontSize: 14, fontWeight: 'bold', marginTop: 5}}>
-          Version {globalConfig.requiredVersion}.0 is Now Mandatory
+          Version {globalConfig.requiredVersion}.0 is Mandatory
         </Text>
 
         <Text style={{color: '#aaa', textAlign: 'center', marginTop: 15, marginBottom: 25, lineHeight: 22}}>
-          A new version of Mizofy TV is available with important stream fixes. You must download and install the update to continue.
+          A new version of Mizofy TV is required to continue. It will download and install directly inside the app.
         </Text>
 
-        <View style={{backgroundColor: '#161616', width: '100%', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#262626', marginBottom: 30}}>
-          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8}}>📌 How to Update:</Text>
-          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>1. Tap the button below to download the APK.</Text>
-          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>2. Open the downloaded file to install the update.</Text>
-          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>3. Mizofy TV will unlock automatically after installation.</Text>
-        </View>
+        {downloading ? (
+          <View style={{width: '100%', backgroundColor: '#161616', padding: 20, borderRadius: 14, borderWidth: 1, borderColor: '#ff2d2d', marginBottom: 25, alignItems: 'center'}}>
+            <ActivityIndicator size="large" color="#ff2d2d" style={{marginBottom: 15}} />
+            <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16, marginBottom: 10}}>
+              Downloading APK... {progressPercent}%
+            </Text>
+            <View style={{width: '100%', height: 10, backgroundColor: '#262626', borderRadius: 5, overflow: 'hidden'}}>
+              <View style={{width: `${Math.max(5, progressPercent)}%`, height: '100%', backgroundColor: '#ff2d2d', borderRadius: 5}} />
+            </View>
+            <Text style={{color: '#888', fontSize: 12, marginTop: 10}}>
+              Please wait, installer will open automatically...
+            </Text>
+          </View>
+        ) : (
+          <View style={{backgroundColor: '#161616', width: '100%', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#262626', marginBottom: 25}}>
+            <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8}}>📌 Direct In-App Update:</Text>
+            <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>• Download completes inside the app without browser redirect.</Text>
+            <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>• Android Package Installer opens automatically once done.</Text>
+            <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>• Mizofy TV unlocks automatically after install.</Text>
+          </View>
+        )}
 
         <TouchableOpacity 
-          style={{backgroundColor: '#ff2d2d', width: '100%', paddingVertical: 18, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 5}}
-          activeOpacity={0.8}
-          onPress={() => {
-            const link = globalConfig.forceUpdateLink || 'http://ummotv.com';
-            Linking.openURL(link);
+          style={{
+            backgroundColor: downloading ? '#661a1a' : '#ff2d2d', 
+            width: '100%', 
+            paddingVertical: 18, 
+            borderRadius: 14, 
+            flexDirection: 'row', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            elevation: 5
           }}
+          disabled={downloading}
+          activeOpacity={0.8}
+          onPress={downloadAndInstallApk}
         >
-          <Ionicons name="download-outline" size={22} color="#fff" style={{marginRight: 10}} />
-          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>DOWNLOAD & INSTALL APK NOW</Text>
+          {downloading ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" style={{marginRight: 10}} />
+              <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>DOWNLOADING ({progressPercent}%)...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="download-outline" size={22} color="#fff" style={{marginRight: 10}} />
+              <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>DOWNLOAD & INSTALL UPDATE</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     );
