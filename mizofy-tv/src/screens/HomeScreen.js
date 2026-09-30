@@ -12,6 +12,7 @@ import * as Device from 'expo-device';
 import * as FileSystem from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Notifications from 'expo-notifications';
+import * as Application from 'expo-application';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -39,6 +40,7 @@ export default function HomeScreen() {
   const [securityViolation, setSecurityViolation] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [forceBypassed, setForceBypassed] = useState(false);
   const carouselRef = useRef(null);
 
   const downloadAndInstallApk = async () => {
@@ -361,8 +363,12 @@ export default function HomeScreen() {
   }
 
   // FORCE UPDATE BLOCKER
+  const installedBuild = Number(Application.nativeBuildVersion || CURRENT_APP_VERSION || 1);
+  const requiredBuild = Number(globalConfig.requiredVersion || 1);
   const isForceUpdateRequired = Boolean(
-    Number(globalConfig.requiredVersion || 0) > CURRENT_APP_VERSION
+    !forceBypassed &&
+    globalConfig.forceUpdateActive === true &&
+    requiredBuild > installedBuild
   );
 
   if (isForceUpdateRequired) {
@@ -376,11 +382,11 @@ export default function HomeScreen() {
         
         <Text style={{color: '#fff', fontSize: 26, fontWeight: 'bold', textAlign: 'center'}}>Update Required</Text>
         <Text style={{color: '#ff2d2d', fontSize: 14, fontWeight: 'bold', marginTop: 5}}>
-          Version {globalConfig.requiredVersion}.0 is Mandatory
+          Version {requiredBuild}.0 is Required (Current: v{installedBuild}.0)
         </Text>
 
         <Text style={{color: '#aaa', textAlign: 'center', marginTop: 15, marginBottom: 25, lineHeight: 22}}>
-          A new version of Mizofy TV is required to continue. It will download and install directly inside the app.
+          A new version of Mizofy TV is available. Please update to continue watching streams smoothly.
         </Text>
 
         {downloading ? (
@@ -432,6 +438,36 @@ export default function HomeScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {/* ALREADY UPDATED / CHECK VERSION BUTTON */}
+        {!downloading && (
+          <TouchableOpacity 
+            style={{
+              backgroundColor: '#1a1a1a', 
+              width: '100%', 
+              paddingVertical: 14, 
+              borderRadius: 14, 
+              flexDirection: 'row', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              borderWidth: 1, 
+              borderColor: '#333', 
+              marginTop: 12
+            }}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (installedBuild >= requiredBuild || !globalConfig.forceUpdateActive) {
+                setForceBypassed(true);
+                Alert.alert("Up to Date", `You have the latest version (v${installedBuild}.0). Unlocking app!`);
+              } else {
+                Alert.alert("Update Required", `Your installed version is v${installedBuild}.0, but v${requiredBuild}.0 is required. Please install the update.`);
+              }
+            }}
+          >
+            <Ionicons name="checkmark-circle-outline" size={20} color="#4CAF50" style={{marginRight: 8}} />
+            <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 14}}>ALREADY UPDATED? CHECK NOW</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
