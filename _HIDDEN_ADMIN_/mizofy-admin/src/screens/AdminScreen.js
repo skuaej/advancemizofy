@@ -34,10 +34,12 @@ export default function AdminScreen() {
       onValue(ref(database, 'globalConfig'), (s) => {
         const val = s.val();
         if (val) {
-          setGlobalConfig({
+          setGlobalConfig(prev => ({
+            ...prev,
             ...val,
-            forceUpdateActive: val.forceUpdateActive === true || Number(val.requiredVersion) > 1
-          });
+            requiredVersion: val.requiredVersion !== undefined ? val.requiredVersion : 2,
+            forceUpdateActive: val.forceUpdateActive === true
+          }));
         }
       });
     } catch (e) { console.warn(e); setLoading(false); }
@@ -51,15 +53,54 @@ export default function AdminScreen() {
     Alert.alert("Success", "Category added!");
   };
 
+  const sendForceUpdateNotificationNow = () => {
+    const targetVer = parseInt(globalConfig.requiredVersion, 10) || 2;
+    const notif = {
+      title: "🔥 Mizofy TV Update Required!",
+      message: `Version ${targetVer}.0 is now available. Please update Mizofy TV to continue watching!`,
+      version: targetVer,
+      isForceUpdate: true,
+      timestamp: Date.now()
+    };
+    set(ref(database, 'latestNotification'), notif);
+    push(ref(database, 'notifications'), notif);
+    Alert.alert("Notification Sent", `Broadcast update notification for v${targetVer}.0 has been sent to all users!`);
+  };
+
   const saveConfig = () => {
+    const isLocked = Boolean(globalConfig.forceUpdateActive);
+    const targetVer = Math.max(1, parseInt(globalConfig.requiredVersion, 10) || 1);
+
     const configToSave = {
       ...globalConfig,
-      requiredVersion: Number(globalConfig.requiredVersion || 1),
-      forceUpdateActive: Number(globalConfig.requiredVersion) > 1
+      requiredVersion: targetVer,
+      forceUpdateActive: isLocked,
+      forceUpdateLink: (globalConfig.forceUpdateLink || '').trim(),
+      alertMsg: (globalConfig.alertMsg || '').trim(),
     };
+
     set(ref(database, 'globalConfig'), configToSave);
     set(ref(database, 'settings'), settings);
-    Alert.alert("Success", "Configuration Saved & Pushed to All Users!");
+
+    // If update is activated, automatically send native push notification to users
+    if (isLocked) {
+      const notif = {
+        title: "🔥 Mizofy TV Update Required!",
+        message: `Version ${targetVer}.0 is required. Please update to continue watching!`,
+        version: targetVer,
+        isForceUpdate: true,
+        timestamp: Date.now()
+      };
+      set(ref(database, 'latestNotification'), notif);
+      push(ref(database, 'notifications'), notif);
+    }
+
+    Alert.alert(
+      "Settings Saved",
+      isLocked 
+        ? `Force update is ACTIVE for v${targetVer}.0. Notification sent to users!` 
+        : "Configuration Saved!"
+    );
   };
 
   const clearAlertMsg = () => {
@@ -181,36 +222,64 @@ export default function AdminScreen() {
           onChangeText={t => setGlobalConfig({...globalConfig, alertMsg: t})} 
         />
 
-        <Text style={styles.label}>Force Update APK Download Link (Mediafire or Direct Link)</Text>
+        <Text style={styles.label}>Force Update APK Download Link (Direct or Mediafire Link)</Text>
         <TextInput 
           style={styles.input} 
           placeholder="Paste Mediafire or direct APK link"
           placeholderTextColor="#444"
           value={globalConfig.forceUpdateLink} 
-          onChangeText={t => setGlobalConfig({...globalConfig, forceUpdateLink: t})} 
+          onChangeText={t => setGlobalConfig(prev => ({ ...prev, forceUpdateLink: t }))} 
         />
 
+        <Text style={styles.label}>Target / Required App Version (Version Code)</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="e.g. 2, 3, 4..."
+          placeholderTextColor="#444"
+          keyboardType="numeric"
+          value={String(globalConfig.requiredVersion !== undefined ? globalConfig.requiredVersion : '')} 
+          onChangeText={t => {
+            const clean = t.replace(/[^0-9]/g, '');
+            setGlobalConfig(prev => ({ ...prev, requiredVersion: clean }));
+          }} 
+        />
+        <Text style={{color: '#888', fontSize: 11, marginTop: -8, marginBottom: 15}}>
+          Current installed apps are on v2. Set this to 3 or higher when you want to force users to update to a new APK.
+        </Text>
+
         {/* FORCE UPDATE TOGGLE */}
-        <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a0505', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#ff2d2d', marginBottom: 20}}>
+        <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: globalConfig.forceUpdateActive ? '#260808' : '#141414', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: globalConfig.forceUpdateActive ? '#ff2d2d' : '#333', marginBottom: 12}}>
           <View style={{flex: 1, paddingRight: 10}}>
-            <Text style={{color: '#ff2d2d', fontWeight: 'bold', fontSize: 13}}>🚨 LOCK ALL APPS (FORCE UPDATE)</Text>
-            <Text style={{color: '#aaa', fontSize: 11, marginTop: 2}}>
-              {Number(globalConfig.requiredVersion) > 1 ? `STATUS: LOCKED (Requires v${globalConfig.requiredVersion}+)` : 'STATUS: UNLOCKED (Normal playback)'}
+            <Text style={{color: globalConfig.forceUpdateActive ? '#ff4d4d' : '#888', fontWeight: 'bold', fontSize: 13}}>
+              {globalConfig.forceUpdateActive ? '🚨 FORCE UPDATE IS ENABLED (LOCKED)' : '✅ FORCE UPDATE IS DISABLED (NORMAL)'}
+            </Text>
+            <Text style={{color: '#aaa', fontSize: 11, marginTop: 3}}>
+              {globalConfig.forceUpdateActive 
+                ? `Apps below version ${globalConfig.requiredVersion || 2} will be blocked until updated.` 
+                : 'All users have normal access. No update prompt shown.'}
             </Text>
           </View>
           <TouchableOpacity 
-            style={{width: 50, height: 30, backgroundColor: Number(globalConfig.requiredVersion) > 1 ? '#ff2d2d' : '#333', borderRadius: 15, justifyContent: 'center', paddingHorizontal: 5}}
+            style={{width: 52, height: 32, backgroundColor: globalConfig.forceUpdateActive ? '#ff2d2d' : '#333', borderRadius: 16, justifyContent: 'center', paddingHorizontal: 4}}
             onPress={() => {
-              const nextVersion = Number(globalConfig.requiredVersion) > 1 ? 1 : 2;
               setGlobalConfig(prev => ({
                 ...prev,
-                requiredVersion: nextVersion
+                forceUpdateActive: !prev.forceUpdateActive
               }));
             }}
           >
-            <View style={{width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10, alignSelf: Number(globalConfig.requiredVersion) > 1 ? 'flex-end' : 'flex-start'}} />
+            <View style={{width: 24, height: 24, backgroundColor: '#fff', borderRadius: 12, alignSelf: globalConfig.forceUpdateActive ? 'flex-end' : 'flex-start'}} />
           </TouchableOpacity>
         </View>
+
+        {/* BROADCAST NOTIFICATION BUTTON */}
+        <TouchableOpacity 
+          style={{backgroundColor: '#991111', padding: 12, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20}}
+          onPress={sendForceUpdateNotificationNow}
+        >
+          <Ionicons name="megaphone-outline" size={18} color="#fff" style={{marginRight: 8}} />
+          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 12}}>SEND UPDATE NOTIFICATION TO USERS NOW</Text>
+        </TouchableOpacity>
 
         <Text style={styles.label}>Telegram Channel Link</Text>
         <TextInput 

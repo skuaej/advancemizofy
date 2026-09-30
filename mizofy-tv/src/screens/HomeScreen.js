@@ -29,12 +29,15 @@ const CURRENT_APP_VERSION = 2;
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const parsedNative = parseInt(Application.nativeBuildVersion, 10);
+  const installedBuild = !isNaN(parsedNative) && parsedNative > 0 ? parsedNative : CURRENT_APP_VERSION;
+
   const [channels, setChannels] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('');
   const [banners, setBanners] = useState([]);
   const [settings, setSettings] = useState({ telegramLink: '', whatsappLink: '', appShareLink: '', showAds: true });
-  const [globalConfig, setGlobalConfig] = useState({ alertMsg: '', forceUpdateLink: '', requiredVersion: 1 });
+  const [globalConfig, setGlobalConfig] = useState({ alertMsg: '', forceUpdateLink: '', requiredVersion: 1, forceUpdateActive: false });
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [securityViolation, setSecurityViolation] = useState(false);
@@ -246,27 +249,70 @@ export default function HomeScreen() {
         if (data) setGlobalConfig(data);
       });
 
+      // Persistent storage for notifications to prevent duplicate alerts
+      const NOTIF_STORE_FILE = FileSystem.documentDirectory + 'mizofy_notif.json';
+
+      const getLastNotifTimestamp = async () => {
+        try {
+          const info = await FileSystem.getInfoAsync(NOTIF_STORE_FILE);
+          if (info.exists) {
+            const str = await FileSystem.readAsStringAsync(NOTIF_STORE_FILE);
+            const data = JSON.parse(str);
+            return Number(data.lastHandledTimestamp || 0);
+          }
+        } catch (e) {
+          console.log('Error reading notif store:', e);
+        }
+        return 0;
+      };
+
+      const saveLastNotifTimestamp = async (ts) => {
+        try {
+          await FileSystem.writeAsStringAsync(NOTIF_STORE_FILE, JSON.stringify({ lastHandledTimestamp: ts }));
+        } catch (e) {
+          console.log('Error saving notif store:', e);
+        }
+      };
+
       // Sync Latest Notification (Posts directly to Android System Notification Panel)
       const notifRef = ref(database, 'latestNotification');
-      let isFirstLoadNotif = true;
       const unsubscribeNotif = onValue(notifRef, async (snapshot) => {
         const data = snapshot.val();
-        if (data && !isFirstLoadNotif) {
-          try {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: data.title || "Mizofy TV",
-                body: data.message || "",
-                sound: true,
-                priority: Notifications.AndroidNotificationPriority.HIGH,
-              },
-              trigger: null, // Shows directly in Android notification drawer
-            });
-          } catch (notifErr) {
-            console.log('System notification post error:', notifErr);
+        if (!data || !data.timestamp) return;
+
+        const notifTs = Number(data.timestamp);
+        const lastTs = await getLastNotifTimestamp();
+
+        // 1. If this exact notification was already handled on this device, skip
+        if (notifTs <= lastTs) {
+          return;
+        }
+
+        // 2. If this is an update notification (has version or isForceUpdate)
+        if (data.version || data.isForceUpdate) {
+          const targetVersion = Number(data.version || 0);
+          // AUTO-CHECK PASS: If user already has this version or newer, DO NOT NOTIFY
+          if (installedBuild >= targetVersion) {
+            await saveLastNotifTimestamp(notifTs);
+            return;
           }
         }
-        isFirstLoadNotif = false;
+
+        // 3. User needs update or it's a general announcement: send system notification
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: data.title || "Mizofy TV",
+              body: data.message || "",
+              sound: true,
+              priority: Notifications.AndroidNotificationPriority.HIGH,
+            },
+            trigger: null,
+          });
+          await saveLastNotifTimestamp(notifTs);
+        } catch (notifErr) {
+          console.log('System notification post error:', notifErr);
+        }
       });
 
       const timeout = setTimeout(() => setLoading(false), 3000);
@@ -362,9 +408,8 @@ export default function HomeScreen() {
     );
   }
 
-  // FORCE UPDATE BLOCKER
-  const installedBuild = Number(Application.nativeBuildVersion || CURRENT_APP_VERSION || 1);
-  const requiredBuild = Number(globalConfig.requiredVersion || 1);
+  // FORCE UPDATE BLOCKER & AUTO-CHECK PASS
+  const requiredBuild = parseInt(globalConfig.requiredVersion, 10) || 1;
   const isForceUpdateRequired = Boolean(
     !forceBypassed &&
     globalConfig.forceUpdateActive === true &&
@@ -458,14 +503,14 @@ export default function HomeScreen() {
             onPress={() => {
               if (installedBuild >= requiredBuild || !globalConfig.forceUpdateActive) {
                 setForceBypassed(true);
-                Alert.alert("Up to Date", `You have the latest version (v${installedBuild}.0). Unlocking app!`);
+                Alert.alert("Auto-Check Passed", `You have the latest version (v${installedBuild}.0). Unlocking app!`);
               } else {
                 Alert.alert("Update Required", `Your installed version is v${installedBuild}.0, but v${requiredBuild}.0 is required. Please install the update.`);
               }
             }}
           >
             <Ionicons name="checkmark-circle-outline" size={20} color="#4CAF50" style={{marginRight: 8}} />
-            <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 14}}>ALREADY UPDATED? CHECK NOW</Text>
+            <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 14}}>ALREADY UPDATED? AUTO-CHECK</Text>
           </TouchableOpacity>
         )}
       </View>
