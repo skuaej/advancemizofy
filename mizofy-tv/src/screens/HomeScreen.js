@@ -11,6 +11,15 @@ import * as Network from 'expo-network';
 import * as Device from 'expo-device';
 import * as FileSystem from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 const { width } = Dimensions.get('window');
 
@@ -168,6 +177,27 @@ export default function HomeScreen() {
     }
 
     try {
+      // Request system notification permissions and create notification channel
+      const initNotifications = async () => {
+        try {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
+          if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Mizofy TV Notifications',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#ff2d2d',
+          });
+        } catch (err) {
+          console.log('Notification channel setup error:', err);
+        }
+      };
+      initNotifications();
+
       // Sync Channels
       const channelsRef = ref(database, 'channels');
       const unsubscribeChannels = onValue(channelsRef, (snapshot) => {
@@ -214,13 +244,25 @@ export default function HomeScreen() {
         if (data) setGlobalConfig(data);
       });
 
-      // Sync Latest Notification (Push Alerts)
+      // Sync Latest Notification (Posts directly to Android System Notification Panel)
       const notifRef = ref(database, 'latestNotification');
       let isFirstLoadNotif = true;
-      const unsubscribeNotif = onValue(notifRef, (snapshot) => {
+      const unsubscribeNotif = onValue(notifRef, async (snapshot) => {
         const data = snapshot.val();
         if (data && !isFirstLoadNotif) {
-          Alert.alert(data.title || "Notice", data.message);
+          try {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: data.title || "Mizofy TV",
+                body: data.message || "",
+                sound: true,
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+              },
+              trigger: null, // Shows directly in Android notification drawer
+            });
+          } catch (notifErr) {
+            console.log('System notification post error:', notifErr);
+          }
         }
         isFirstLoadNotif = false;
       });
