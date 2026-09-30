@@ -140,13 +140,20 @@ export default function HomeScreen() {
     if(url) Linking.openURL(url);
   };
 
+  const isStreamUrl = (url) => {
+    if (!url) return false;
+    const l = url.toLowerCase();
+    return l.includes('.m3u8') || l.includes('.ts') || l.includes('.mpd') || 
+           l.includes(':8000') || l.includes(':8080') || l.includes('/live/') || 
+           l.includes('/play/') || (!l.includes('mediafire.com') && !l.endsWith('.html'));
+  };
+
   const handleBannerPress = (banner) => {
     if (!banner.url) return;
-    // Check if it's an external web link or a live video stream
-    if (banner.url.endsWith('.m3u8') || banner.url.endsWith('.ts')) {
-      navigation.navigate('Player', { channel: { url: banner.url, title: banner.title } });
+    if (isStreamUrl(banner.url)) {
+      navigation.navigate('Player', { channel: { url: banner.url, title: banner.title || 'Live Stream' } });
     } else {
-      Linking.openURL(banner.url); // Open embedded WebView links directly in user's browser
+      Linking.openURL(banner.url);
     }
   };
 
@@ -271,11 +278,11 @@ export default function HomeScreen() {
                       <Text style={styles.bannerTitle}>{item.title || 'HOT LIVE STREAM'}</Text>
                       {item.url ? (
                         <View style={styles.watchBtn}>
-                           {item.url.includes('.ts') || item.url.includes('.m3u8') ? 
+                           {isStreamUrl(item.url) ? 
                              <Ionicons name="play" size={16} color="#fff" style={{marginRight: 8}}/> : 
                              <Ionicons name="open-outline" size={16} color="#fff" style={{marginRight: 8}}/>
                            }
-                          <Text style={styles.watchBtnText}>{item.url.includes('.ts') ? 'WATCH STREAM' : 'OPEN LINK'}</Text>
+                          <Text style={styles.watchBtnText}>{isStreamUrl(item.url) ? 'WATCH STREAM' : 'OPEN LINK'}</Text>
                         </View>
                       ) : null}
                     </View>
