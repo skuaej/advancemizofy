@@ -43,24 +43,32 @@ export default function HomeScreen() {
       setDownloading(true);
       setDownloadProgress(0);
 
-      // Handle Mediafire links by resolving the real direct download link
+      // 1. Handle Mediafire links by resolving the direct binary download URL
       let directUrl = link;
       if (link.includes('mediafire.com')) {
         try {
           const res = await fetch(link, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
             }
           });
           const text = await res.text();
-          const match = text.match(/id=["']downloadButton["'][^>]*href=["']([^"']+)["']/i) ||
-                        text.match(/aria-label=["']Download file["'][^>]*href=["']([^"']+)["']/i) ||
-                        text.match(/href=["'](https?:\/\/download[^"']+)["']/i);
-          if (match && match[1]) {
-            directUrl = match[1];
+          const match = text.match(/https:\/\/download\d+\.mediafire\.com\/[^\s"'<>]+/i) ||
+                        text.match(/href=["'](https?:\/\/[a-zA-Z0-9_\-\.]*mediafire\.com\/[^\s"']+)["'][^>]*id=["']downloadButton["']/i);
+          if (match) {
+            directUrl = match[1] || match[0];
           }
         } catch (scrapeErr) {
           console.log('Mediafire direct link resolution error:', scrapeErr);
+        }
+      }
+
+      // 2. Handle Google Drive links
+      if (link.includes('drive.google.com')) {
+        const gdriveMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+        if (gdriveMatch && gdriveMatch[1]) {
+          directUrl = `https://drive.usercontent.google.com/download?id=${gdriveMatch[1]}&export=download&confirm=t`;
         }
       }
 
@@ -72,11 +80,15 @@ export default function HomeScreen() {
         await FileSystem.deleteAsync(fileUri, { idempotent: true });
       }
 
-      // Download directly inside the app with real progress
+      // Download directly inside the app with browser User-Agent
       const downloadResumable = FileSystem.createDownloadResumable(
         directUrl,
         fileUri,
-        {},
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        },
         (progress) => {
           if (progress.totalBytesExpectedToWrite > 0) {
             const pct = progress.totalBytesWritten / progress.totalBytesExpectedToWrite;
@@ -110,9 +122,10 @@ export default function HomeScreen() {
       setDownloadProgress(0);
       console.error('APK Download & Install Error:', e);
       Alert.alert(
-        'Update Error',
-        'Could not complete the automatic download. Please ensure the link is active.',
+        'Download Error',
+        'Could not complete the automatic download. Would you like to open the download link in your browser?',
         [
+          { text: 'Open in Browser', onPress: () => Linking.openURL(link) },
           { text: 'Retry', onPress: downloadAndInstallApk },
           { text: 'Cancel', style: 'cancel' }
         ]
