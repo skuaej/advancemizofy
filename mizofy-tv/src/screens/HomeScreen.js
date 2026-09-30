@@ -193,21 +193,37 @@ export default function HomeScreen() {
   // FORCE UPDATE BLOCKER
   if (globalConfig.requiredVersion > CURRENT_APP_VERSION) {
     return (
-      <View style={[styles.container, {justifyContent: 'center', alignItems: 'center', padding: 30}]}>
-        <Ionicons name="cloud-download" size={80} color="#ff2d2d" />
-        <Text style={{color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 20}}>Update Required</Text>
-        <Text style={{color: '#aaa', textAlign: 'center', marginTop: 10, marginBottom: 30}}>
-          A new version of Mizofy TV is available. You must update to continue watching streams safely.
+      <View style={[styles.container, {justifyContent: 'center', alignItems: 'center', padding: 25, backgroundColor: '#0a0a0a'}]}>
+        <View style={{width: 100, height: 100, borderRadius: 50, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ff2d2d', marginBottom: 20}}>
+          <Ionicons name="cloud-download-outline" size={54} color="#ff2d2d" />
+        </View>
+        
+        <Text style={{color: '#fff', fontSize: 26, fontWeight: 'bold', textAlign: 'center'}}>Update Required</Text>
+        <Text style={{color: '#ff2d2d', fontSize: 14, fontWeight: 'bold', marginTop: 5}}>
+          Version {globalConfig.requiredVersion}.0 is Now Mandatory
         </Text>
+
+        <Text style={{color: '#aaa', textAlign: 'center', marginTop: 15, marginBottom: 25, lineHeight: 22}}>
+          A new version of Mizofy TV is available with important stream fixes. You must download and install the update to continue.
+        </Text>
+
+        <View style={{backgroundColor: '#161616', width: '100%', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#262626', marginBottom: 30}}>
+          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8}}>📌 How to Update:</Text>
+          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>1. Tap the button below to download the APK.</Text>
+          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>2. Open the downloaded file to install the update.</Text>
+          <Text style={{color: '#888', fontSize: 12, lineHeight: 18}}>3. Mizofy TV will unlock automatically after installation.</Text>
+        </View>
+
         <TouchableOpacity 
-          style={{backgroundColor: '#ff2d2d', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 25, flexDirection: 'row', alignItems: 'center'}}
+          style={{backgroundColor: '#ff2d2d', width: '100%', paddingVertical: 18, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', elevation: 5}}
+          activeOpacity={0.8}
           onPress={() => {
             const link = globalConfig.forceUpdateLink || 'http://ummotv.com';
             Linking.openURL(link);
           }}
         >
-          <Ionicons name="download-outline" size={20} color="#fff" style={{marginRight: 8}} />
-          <Text style={{color: '#fff', fontWeight: 'bold'}}>DOWNLOAD & INSTALL APK</Text>
+          <Ionicons name="download-outline" size={22} color="#fff" style={{marginRight: 10}} />
+          <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 16}}>DOWNLOAD & INSTALL APK NOW</Text>
         </TouchableOpacity>
       </View>
     );
