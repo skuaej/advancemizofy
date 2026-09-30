@@ -16,7 +16,7 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(true);
   
   const [settings, setSettings] = useState({ telegramLink: '', whatsappLink: '', appShareLink: '', showAds: true });
-  const [globalConfig, setGlobalConfig] = useState({ alertMsg: '', forceUpdateLink: '', requiredVersion: 1 });
+  const [globalConfig, setGlobalConfig] = useState({ alertMsg: '', forceUpdateLink: '', requiredVersion: 1, forceUpdateActive: false });
 
   useEffect(() => {
     if (!database) { setLoading(false); return; }
@@ -31,7 +31,15 @@ export default function AdminScreen() {
         setLoading(false);
       });
       onValue(ref(database, 'settings'), (s) => s.val() && setSettings(s.val()));
-      onValue(ref(database, 'globalConfig'), (s) => s.val() && setGlobalConfig(s.val()));
+      onValue(ref(database, 'globalConfig'), (s) => {
+        const val = s.val();
+        if (val) {
+          setGlobalConfig({
+            ...val,
+            forceUpdateActive: val.forceUpdateActive === true || Number(val.requiredVersion) > 1
+          });
+        }
+      });
     } catch (e) { console.warn(e); setLoading(false); }
   }, []);
 
@@ -44,9 +52,20 @@ export default function AdminScreen() {
   };
 
   const saveConfig = () => {
-    set(ref(database, 'globalConfig'), globalConfig);
+    const configToSave = {
+      ...globalConfig,
+      requiredVersion: globalConfig.forceUpdateActive ? 9999 : Number(globalConfig.requiredVersion || 1),
+      forceUpdateActive: Boolean(globalConfig.forceUpdateActive)
+    };
+    set(ref(database, 'globalConfig'), configToSave);
     set(ref(database, 'settings'), settings);
-    Alert.alert("Success", "Configuration Saved!");
+    Alert.alert("Success", "Configuration Saved & Pushed to All Users!");
+  };
+
+  const clearAlertMsg = () => {
+    setGlobalConfig(prev => ({ ...prev, alertMsg: '' }));
+    update(ref(database, 'globalConfig'), { alertMsg: '' });
+    Alert.alert("Cleared", "Alert message removed from all users!");
   };
 
   const updateCategory = async () => {
@@ -146,31 +165,52 @@ export default function AdminScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Global Settings & Socials</Text>
         
-        <Text style={styles.label}>Scrolling Alert Message</Text>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
+          <Text style={[styles.label, {marginBottom: 0}]}>Scrolling Alert Message</Text>
+          {globalConfig.alertMsg ? (
+            <TouchableOpacity onPress={clearAlertMsg} style={{backgroundColor: '#ff2d2d', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5}}>
+              <Text style={{color: '#fff', fontSize: 11, fontWeight: 'bold'}}>Clear / Delete</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <TextInput 
           style={styles.input} 
           value={globalConfig.alertMsg} 
+          placeholder="Leave empty or click Clear to delete"
+          placeholderTextColor="#444"
           onChangeText={t => setGlobalConfig({...globalConfig, alertMsg: t})} 
         />
 
-        <View style={styles.inputRow}>
-          <View style={{flex: 1}}>
-            <Text style={styles.label}>Force Update Link</Text>
-            <TextInput 
-              style={styles.input} 
-              value={globalConfig.forceUpdateLink} 
-              onChangeText={t => setGlobalConfig({...globalConfig, forceUpdateLink: t})} 
-            />
+        <Text style={styles.label}>Force Update APK Download Link (Mediafire or Direct Link)</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Paste Mediafire or direct APK link"
+          placeholderTextColor="#444"
+          value={globalConfig.forceUpdateLink} 
+          onChangeText={t => setGlobalConfig({...globalConfig, forceUpdateLink: t})} 
+        />
+
+        {/* FORCE UPDATE TOGGLE */}
+        <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a0505', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#ff2d2d', marginBottom: 20}}>
+          <View style={{flex: 1, paddingRight: 10}}>
+            <Text style={{color: '#ff2d2d', fontWeight: 'bold', fontSize: 13}}>🚨 LOCK ALL APPS (FORCE UPDATE)</Text>
+            <Text style={{color: '#aaa', fontSize: 11, marginTop: 2}}>
+              {globalConfig.forceUpdateActive ? 'STATUS: LOCKED (All users forced to update)' : 'STATUS: UNLOCKED (Normal playback)'}
+            </Text>
           </View>
-          <View style={{width: 80}}>
-            <Text style={styles.label}>Req Ver</Text>
-            <TextInput 
-              style={styles.input} 
-              keyboardType="numeric"
-              value={String(globalConfig.requiredVersion || 1)} 
-              onChangeText={t => setGlobalConfig({...globalConfig, requiredVersion: parseInt(t) || 1})} 
-            />
-          </View>
+          <TouchableOpacity 
+            style={{width: 50, height: 30, backgroundColor: globalConfig.forceUpdateActive ? '#ff2d2d' : '#333', borderRadius: 15, justifyContent: 'center', paddingHorizontal: 5}}
+            onPress={() => {
+              const nextState = !globalConfig.forceUpdateActive;
+              setGlobalConfig(prev => ({
+                ...prev,
+                forceUpdateActive: nextState,
+                requiredVersion: nextState ? 9999 : 1
+              }));
+            }}
+          >
+            <View style={{width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10, alignSelf: globalConfig.forceUpdateActive ? 'flex-end' : 'flex-start'}} />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.label}>Telegram Channel Link</Text>

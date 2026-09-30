@@ -283,7 +283,12 @@ export default function HomeScreen() {
   }
 
   // FORCE UPDATE BLOCKER
-  if (globalConfig.requiredVersion > CURRENT_APP_VERSION) {
+  const isForceUpdateRequired = Boolean(
+    globalConfig.forceUpdateActive === true ||
+    Number(globalConfig.requiredVersion || 0) > CURRENT_APP_VERSION
+  );
+
+  if (isForceUpdateRequired) {
     const progressPercent = Math.round(downloadProgress * 100);
 
     return (
@@ -356,24 +361,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {globalConfig.alertMsg ? (
-        <TouchableOpacity 
-          style={styles.alertBanner} 
-          activeOpacity={0.8}
-          onPress={() => {
-            const urlMatch = globalConfig.alertMsg.match(/(https?:\/\/[^\s]+)/);
-            const targetUrl = urlMatch ? urlMatch[0] : globalConfig.forceUpdateLink;
-            if (targetUrl) {
-              Linking.openURL(targetUrl);
-            }
-          }}
-        >
-          <Ionicons name="warning" size={20} color="#fff" />
-          <Text style={styles.alertText}>{globalConfig.alertMsg}</Text>
-          <Ionicons name="open-outline" size={18} color="#fff" style={{marginLeft: 8}} />
-        </TouchableOpacity>
-      ) : null}
-
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.logoText}>Mizofy <Text style={{color: '#ff2d2d'}}>TV</Text></Text>
