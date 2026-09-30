@@ -123,6 +123,13 @@ export default function HomeScreen() {
 
       setDownloading(false);
 
+      // Validate that downloaded file is a real APK (greater than 500 KB)
+      const downloadedFileInfo = await FileSystem.getInfoAsync(localUri);
+      if (!downloadedFileInfo.exists || downloadedFileInfo.size < 500 * 1024) {
+        const sizeKb = downloadedFileInfo.exists ? Math.round(downloadedFileInfo.size / 1024) : 0;
+        throw new Error(`The link provided is not an APK file (Downloaded size: ${sizeKb} KB). Please paste a valid direct APK download link.`);
+      }
+
       // Convert file:// to content:// for Android PackageInstaller
       let contentUri = localUri;
       try {
@@ -144,7 +151,7 @@ export default function HomeScreen() {
       console.error('APK Download & Install Error:', e);
       Alert.alert(
         'Download Error',
-        'Could not complete the automatic download. Would you like to open the download link in your browser?',
+        e.message || 'Could not complete the automatic download. Would you like to open the download link in your browser?',
         [
           { text: 'Open in Browser', onPress: () => Linking.openURL(link) },
           { text: 'Retry', onPress: downloadAndInstallApk },
