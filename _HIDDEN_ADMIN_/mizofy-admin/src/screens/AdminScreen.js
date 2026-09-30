@@ -54,8 +54,8 @@ export default function AdminScreen() {
   const saveConfig = () => {
     const configToSave = {
       ...globalConfig,
-      requiredVersion: globalConfig.forceUpdateActive ? 9999 : Number(globalConfig.requiredVersion || 1),
-      forceUpdateActive: Boolean(globalConfig.forceUpdateActive)
+      requiredVersion: Number(globalConfig.requiredVersion || 1),
+      forceUpdateActive: Number(globalConfig.requiredVersion) > 1
     };
     set(ref(database, 'globalConfig'), configToSave);
     set(ref(database, 'settings'), settings);
@@ -195,21 +195,20 @@ export default function AdminScreen() {
           <View style={{flex: 1, paddingRight: 10}}>
             <Text style={{color: '#ff2d2d', fontWeight: 'bold', fontSize: 13}}>🚨 LOCK ALL APPS (FORCE UPDATE)</Text>
             <Text style={{color: '#aaa', fontSize: 11, marginTop: 2}}>
-              {globalConfig.forceUpdateActive ? 'STATUS: LOCKED (All users forced to update)' : 'STATUS: UNLOCKED (Normal playback)'}
+              {Number(globalConfig.requiredVersion) > 1 ? `STATUS: LOCKED (Requires v${globalConfig.requiredVersion}+)` : 'STATUS: UNLOCKED (Normal playback)'}
             </Text>
           </View>
           <TouchableOpacity 
-            style={{width: 50, height: 30, backgroundColor: globalConfig.forceUpdateActive ? '#ff2d2d' : '#333', borderRadius: 15, justifyContent: 'center', paddingHorizontal: 5}}
+            style={{width: 50, height: 30, backgroundColor: Number(globalConfig.requiredVersion) > 1 ? '#ff2d2d' : '#333', borderRadius: 15, justifyContent: 'center', paddingHorizontal: 5}}
             onPress={() => {
-              const nextState = !globalConfig.forceUpdateActive;
+              const nextVersion = Number(globalConfig.requiredVersion) > 1 ? 1 : 2;
               setGlobalConfig(prev => ({
                 ...prev,
-                forceUpdateActive: nextState,
-                requiredVersion: nextState ? 9999 : 1
+                requiredVersion: nextVersion
               }));
             }}
           >
-            <View style={{width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10, alignSelf: globalConfig.forceUpdateActive ? 'flex-end' : 'flex-start'}} />
+            <View style={{width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10, alignSelf: Number(globalConfig.requiredVersion) > 1 ? 'flex-end' : 'flex-start'}} />
           </TouchableOpacity>
         </View>
 

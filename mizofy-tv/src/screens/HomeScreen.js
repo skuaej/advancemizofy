@@ -15,7 +15,7 @@ import * as IntentLauncher from 'expo-intent-launcher';
 const { width } = Dimensions.get('window');
 
 // Increment this natively when publishing new APKs
-const CURRENT_APP_VERSION = 1;
+const CURRENT_APP_VERSION = 2;
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -320,7 +320,6 @@ export default function HomeScreen() {
 
   // FORCE UPDATE BLOCKER
   const isForceUpdateRequired = Boolean(
-    globalConfig.forceUpdateActive === true ||
     Number(globalConfig.requiredVersion || 0) > CURRENT_APP_VERSION
   );
 

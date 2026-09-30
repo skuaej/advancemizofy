@@ -3,7 +3,7 @@
     "name": "Mizofy TV",
     "slug": "mizofy-tv",
     "scheme": "mizofytv",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -99,6 +99,7 @@
     },
     "android": {
       "package": "com.mizofy.tv",
+      "versionCode": 2,
       "usesCleartextTraffic": true,
       "supportsPictureInPicture": true,
       "adaptiveIcon": {
