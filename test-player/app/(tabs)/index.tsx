@@ -20,13 +20,13 @@ export default function HomeScreen() {
   if (!showPlayer) {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcomeTitle}>bsdk welcome</Text>
-        <Text style={styles.welcomeSub}>Test Player App (8082)</Text>
+        <Text style={styles.welcomeTitle}>LIVE STREAM TEST</Text>
+        <Text style={styles.welcomeSub}>Port 8090 - TS Player</Text>
         <TouchableOpacity 
           style={styles.startButton} 
           onPress={() => setShowPlayer(true)}
         >
-          <Text style={styles.buttonText}>START PLAYER</Text>
+          <Text style={styles.buttonText}>START STREAM</Text>
         </TouchableOpacity>
       </View>
     );
@@ -34,7 +34,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>bsdd start</Text>
+      <Text style={styles.title}>Playing: 9399.ts</Text>
       <Video
         source={{ 
           uri: 'http://datahub11.com/live/76446885500/86436775522/9399.ts',
@@ -45,7 +45,6 @@ export default function HomeScreen() {
         isMuted={false}
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
-        isLooping
         style={styles.video}
         useNativeControls
         onError={(e) => console.log('Video Error:', e)}

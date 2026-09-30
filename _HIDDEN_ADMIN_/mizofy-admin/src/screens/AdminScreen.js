@@ -15,7 +15,7 @@ export default function AdminScreen() {
   const [editCatName, setEditCatName] = useState('');
   const [loading, setLoading] = useState(true);
   
-  const [settings, setSettings] = useState({ telegramLink: '', whatsappLink: '', appShareLink: '' });
+  const [settings, setSettings] = useState({ telegramLink: '', whatsappLink: '', appShareLink: '', showAds: true });
   const [globalConfig, setGlobalConfig] = useState({ alertMsg: '', forceUpdateLink: '', requiredVersion: 1 });
 
   useEffect(() => {
@@ -193,6 +193,16 @@ export default function AdminScreen() {
           value={settings.appShareLink} 
           onChangeText={t => setSettings({...settings, appShareLink: t})} 
         />
+
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 20}}>
+          <Text style={[styles.label, {flex: 1, marginBottom: 0}]}>Show Unity Ads in User App</Text>
+          <TouchableOpacity 
+            style={{width: 50, height: 30, backgroundColor: settings.showAds !== false ? '#4CAF50' : '#444', borderRadius: 15, justifyContent: 'center', paddingHorizontal: 5}}
+            onPress={() => setSettings({...settings, showAds: settings.showAds === false ? true : false})}
+          >
+            <View style={{width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10, alignSelf: settings.showAds !== false ? 'flex-end' : 'flex-start'}} />
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={saveConfig}>
           <Text style={styles.saveBtnText}>SAVE & PUSH ALL SETTINGS</Text>

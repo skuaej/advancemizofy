@@ -81,6 +81,22 @@ export default function HomeScreen() {
         if (data) setGlobalConfig(data);
       });
 
+      // Sync Latest Notification (Push Alerts)
+      const notifRef = ref(database, 'latestNotification');
+      let isFirstLoadNotif = true;
+      const unsubscribeNotif = onValue(notifRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+           if (!isFirstLoadNotif) {
+             Alert.alert(data.title || "Notice", data.message);
+           } 
+           else if (Date.now() - data.timestamp < 12 * 60 * 60 * 1000) {
+             Alert.alert(data.title || "Notice", data.message);
+           }
+        }
+        isFirstLoadNotif = false;
+      });
+
       const timeout = setTimeout(() => setLoading(false), 3000);
 
       return () => {
@@ -90,6 +106,7 @@ export default function HomeScreen() {
         unsubscribeBanners();
         unsubscribeSettings();
         unsubscribeConfig();
+        unsubscribeNotif();
       };
     } catch (e) {
       console.warn('User Sync Error:', e);
