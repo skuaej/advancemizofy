@@ -24,19 +24,78 @@ export const UNITY_CONFIG = {
 };
 
 export default function UnityAdBanner() {
+  const adHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+            overflow: hidden;
+          }
+          .ad-box {
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border: 1px solid #ff2d2d;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-sizing: border-box;
+          }
+          .ad-badge {
+            background: #ff2d2d;
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+          }
+          .ad-title {
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+          }
+          .ad-btn {
+            background: #25D366;
+            color: #fff;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 15px;
+            text-decoration: none;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ad-box">
+          <span class="ad-badge">SPONSORED</span>
+          <span class="ad-title">🔥 Stream Live Movies & Sports!</span>
+          <a href="#" class="ad-btn">INSTALL NOW</a>
+        </div>
+      </body>
+    </html>
+  `;
+
   return (
     <View style={styles.adContainer}>
       <WebView
-        source={{ html: `
-          <html>
-            <body style="margin:0;padding:0;background:#1a1a1a;display:flex;justify-content:center;align-items:center;">
-              <div style="color:#ff2d2d;font-family:sans-serif;font-weight:bold;font-size:14px;border:1px solid #ff2d2d;padding:10px;border-radius:5px;">
-                UNITY ADS LOADING...
-              </div>
-            </body>
-          </html>
-        `}}
-        style={{ width: '100%', height: 60 }}
+        originWhitelist={['*']}
+        source={{ html: adHtml }}
+        style={{ width: '100%', height: 60, backgroundColor: 'transparent' }}
+        scrollEnabled={false}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
       />
     </View>
   );

@@ -193,10 +193,14 @@ export default function HomeScreen() {
           A new version of Mizofy TV is available. You must update to continue watching streams safely.
         </Text>
         <TouchableOpacity 
-          style={{backgroundColor: '#ff2d2d', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 25}}
-          onPress={() => Linking.openURL(globalConfig.forceUpdateLink || 'http://ummotv.com')}
+          style={{backgroundColor: '#ff2d2d', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 25, flexDirection: 'row', alignItems: 'center'}}
+          onPress={() => {
+            const link = globalConfig.forceUpdateLink || 'http://ummotv.com';
+            Linking.openURL(link);
+          }}
         >
-          <Text style={{color: '#fff', fontWeight: 'bold'}}>DOWNLOAD LATEST APK</Text>
+          <Ionicons name="download-outline" size={20} color="#fff" style={{marginRight: 8}} />
+          <Text style={{color: '#fff', fontWeight: 'bold'}}>DOWNLOAD & INSTALL APK</Text>
         </TouchableOpacity>
       </View>
     );
@@ -205,10 +209,21 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {globalConfig.alertMsg ? (
-        <View style={styles.alertBanner}>
+        <TouchableOpacity 
+          style={styles.alertBanner} 
+          activeOpacity={0.8}
+          onPress={() => {
+            const urlMatch = globalConfig.alertMsg.match(/(https?:\/\/[^\s]+)/);
+            const targetUrl = urlMatch ? urlMatch[0] : globalConfig.forceUpdateLink;
+            if (targetUrl) {
+              Linking.openURL(targetUrl);
+            }
+          }}
+        >
           <Ionicons name="warning" size={20} color="#fff" />
           <Text style={styles.alertText}>{globalConfig.alertMsg}</Text>
-        </View>
+          <Ionicons name="open-outline" size={18} color="#fff" style={{marginLeft: 8}} />
+        </TouchableOpacity>
       ) : null}
 
       <ScrollView>
